@@ -200,7 +200,7 @@ Money is stored as integer cents everywhere.
 - [x] Monthly breakdown by category
 - [~] Deploy to Fly.io (EU), custom domain, update privacy/terms URLs in Enable Banking: files ready, needs domain + `fly deploy`
 - [~] In-app "Reconnect bank" flow: built and tested with a fake bank; needs the redirect URL `https://<domain>/bank/callback` registered in Enable Banking
-- [~] iPhone home screen widget (Scriptable, `widget/`): the savings jar, no euro amounts. Reads two fill levels from Summary through a separate "Anyone" Apps Script project with a token, so the sheet and dashboard stay "only myself". Code ready; needs the endpoint deployed and testing on the phone
+- [x] iPhone home screen widget (Scriptable, `widget/`): the savings jar, no euro amounts. Reads two fill levels from Summary through a separate "Anyone" Apps Script project with a token, so the sheet and dashboard stay "only myself". In use on the phone
 
 ### Phase 4 — Budgets & saving
 - [ ] Monthly budgets per category with rollover option
