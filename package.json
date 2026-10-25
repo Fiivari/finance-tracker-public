@@ -1,0 +1,17 @@
+{
+  "name": "personal-finance",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "sync": "node --env-file=.env scripts/sync.ts",
+    "categorize": "node --env-file=.env scripts/categorize.ts",
+    "link": "node --env-file=.env scripts/link.ts",
+    "transactions": "node --env-file=.env scripts/transactions.ts",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "gas:push": "npx -y @google/clasp@3.4.1 push --force",
+    "onboard": "node scripts/onboard.ts"
+  }
+}

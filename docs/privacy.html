@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Oma talous</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:680px;margin:2rem auto;padding:0 16px;color:#1d2228;background:#fff}h1{font-size:1.6rem}h2{font-size:1.1rem;margin-top:1.6rem}</style>
+</head>
+<body>
+<h1>Privacy policy</h1>
+<p>Oma talous is open-source software that each person runs for themselves. Every copy is operated by the
+account holder whose bank accounts it reads, for their own personal use only. There is no shared service and
+no operator in between.</p>
+
+<h2>What data is processed</h2>
+<p>Account information from the account holder's own bank, with their consent: account names and types,
+balances, and transactions (date, amount, counterparty name, message, bank transaction code). Account numbers
+(IBANs) are not stored; accounts are identified by a one-way hash.</p>
+
+<h2>Where it goes</h2>
+<ul>
+<li>The bank sends it to <a href="https://enablebanking.com">Enable Banking</a>, a licensed account information
+service provider, under the account holder's own Enable Banking application.</li>
+<li>From there it goes only to the account holder's own Google account: a Google Sheet and a Google Apps Script
+project that they own. Google processes it under the account holder's Google terms.</li>
+<li>Nothing is sent to the authors of the software or to any other party.</li>
+</ul>
+
+<h2>Retention and control</h2>
+<p>The data stays in the account holder's Google Sheet until they delete it. Access is read-only and lasts at
+most 180 days per consent. It can be withdrawn at any time in the bank, in the Enable Banking control panel, or
+by deleting the Sheet and its script.</p>
+
+<h2>Contact</h2>
+<p>Each copy's operator is its account holder. Questions about the software:
+<a href="https://github.com/Fiivari/finance-tracker-public/issues">GitHub issues</a>.</p>
+</body>
+</html>

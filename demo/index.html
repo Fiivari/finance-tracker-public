@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<!--
+  45-second 9:16 demo of the finance setup, all mock data. Every frame is a pure function of time: seek(seconds)
+  draws that moment, so render.mjs can capture it frame by frame. Opened directly, it plays in a loop.
+  No CSS transitions or animations on purpose: they would run on wall-clock time and break frame capture.
+-->
+<style>
+  :root {
+    --bg: #f3f2ee;
+    --surface: #ffffff;
+    --surface-2: #f0efeb;
+    --line: #e6e5e0;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --text-3: #7a7974;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-muted: #c4c3bc;
+    --positive: #006300;
+    --positive-bg: #e3f3e3;
+    --shadow: 0 1px 1px rgb(20 24 40 / 0.03), 0 8px 24px -8px rgb(20 24 40 / 0.12);
+    --claude: #d97757;
+    --chat-bg: #faf9f5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #111; overflow: hidden; }
+  body { display: grid; place-items: center; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: var(--text); }
+  #stage { position: relative; width: 540px; height: 960px; overflow: hidden; background: var(--bg); transform-origin: center; flex: none; }
+  .abs { position: absolute; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Background */
+  .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; }
+  .b1 { width: 420px; height: 420px; background: #bcd4f6; left: -120px; top: -100px; }
+  .b2 { width: 380px; height: 380px; background: #c5ecdc; right: -140px; bottom: 80px; }
+  .b3 { width: 300px; height: 300px; background: #f6d9c8; right: -60px; top: 260px; opacity: 0.4; }
+
+  /* Captions */
+  .caption { position: absolute; left: 32px; right: 32px; top: 64px; text-align: center; }
+  .caption h2 { margin: 0; font-size: 36px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; }
+  .caption p { margin: 10px 0 0; font-size: 17px; line-height: 1.35; color: var(--text-2); font-weight: 500; }
+
+  /* Intro & outro */
+  .center-block { position: absolute; left: 40px; right: 40px; top: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .app-icon { width: 112px; height: 112px; border-radius: 30px; background: linear-gradient(140deg, #184f95, #2a78d6); box-shadow: 0 24px 50px -16px rgb(24 79 149 / 0.6); display: grid; place-items: center; }
+  .center-block h1 { font-size: 46px; line-height: 1.05; letter-spacing: -0.035em; font-weight: 800; margin: 34px 0 0; }
+  .center-block .lead { font-size: 19px; color: var(--text-2); font-weight: 500; margin-top: 14px; line-height: 1.4; }
+  .flow { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 30px; font-size: 15px; font-weight: 600; color: var(--text-2); flex-wrap: wrap; }
+  .flow span.chip { background: var(--surface); box-shadow: var(--shadow); border-radius: 999px; padding: 8px 14px; }
+  .feature { display: flex; align-items: center; gap: 14px; width: 380px; background: var(--surface); box-shadow: var(--shadow); border-radius: 20px; padding: 16px 18px; margin-top: 12px; text-align: left; font-size: 18px; font-weight: 600; }
+  .feature .ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; font-size: 22px; background: var(--surface-2); flex: none; }
+  .feature small { display: block; font-size: 14px; color: var(--text-3); font-weight: 500; margin-top: 2px; }
+  .credit { margin-top: 30px; font-size: 15px; color: var(--text-3); font-weight: 500; }
+
+  /* Pipeline */
+  #pipeline { position: absolute; left: 0; right: 0; top: 230px; height: 640px; }
+  .node { position: absolute; left: 90px; width: 360px; height: 92px; background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; padding: 0 20px; }
+  .node .ic { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 28px; flex: none; }
+  .node b { display: block; font-size: 19px; letter-spacing: -0.01em; }
+  .node span { font-size: 14px; color: var(--text-3); font-weight: 500; }
+  .wire { position: absolute; left: 268px; width: 4px; border-radius: 2px; background: var(--line); }
+  .dot { position: absolute; left: 264px; width: 12px; height: 12px; border-radius: 50%; background: var(--series-1); box-shadow: 0 0 0 4px rgb(42 120 214 / 0.18); }
+
+  /* Phone */
+  #phone { position: absolute; left: 105px; top: 238px; width: 330px; height: 690px; border-radius: 52px; background: #0d0d0f; padding: 9px; box-shadow: 0 40px 80px -30px rgb(10 20 50 / 0.45), 0 0 0 2px #2a2a2e inset; }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 44px; overflow: hidden; background: var(--bg); }
+  .statusbar { position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 40px; display: flex; justify-content: space-between; align-items: center; padding: 6px 26px 0 30px; font-size: 13px; font-weight: 700; background: linear-gradient(var(--sb, #eef1f6) 75%, transparent); height: 48px; align-items: flex-start; padding-top: 14px; }
+  .island { position: absolute; z-index: 21; left: 50%; top: 9px; width: 96px; height: 27px; margin-left: -48px; border-radius: 14px; background: #0d0d0f; }
+  .app { position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow: hidden; background: radial-gradient(500px 220px at 50% -60px, #d9e5f8 0%, transparent 75%) no-repeat, var(--bg); }
+  .scroll { position: absolute; left: 0; right: 0; top: 0; padding: 46px 14px 90px; }
+  header.top { display: flex; justify-content: space-between; align-items: flex-end; margin: 4px 4px 10px; }
+  header.top h1 { font-size: 25px; line-height: 1.1; margin: 0; letter-spacing: -0.025em; font-weight: 800; }
+  header.top .hello { color: var(--text-2); font-size: 12px; font-weight: 600; margin-bottom: 1px; }
+  header.top .date { color: var(--text-3); font-size: 11px; margin-bottom: 3px; font-weight: 500; }
+  h3 { font-size: 16px; letter-spacing: -0.01em; margin: 18px 4px 8px; font-weight: 700; }
+  .card { background: var(--surface); border-radius: 20px; padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .muted { color: var(--text-2); }
+  .small { font-size: 11px; }
+  .figure { font-size: 26px; font-weight: 800; letter-spacing: -0.025em; margin: 2px 0 6px; }
+  .pill { display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--positive-bg); color: var(--positive); }
+  .pill span { font-weight: 400; margin-left: 3px; }
+  .status { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; margin: -2px 4px 10px; color: var(--positive); background: var(--positive-bg); }
+  .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .legend { display: flex; gap: 12px; font-size: 10.5px; color: var(--text-2); margin: 10px 0 4px; flex-wrap: wrap; }
+  .key { display: inline-block; width: 9px; height: 9px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+  .key.line { height: 3px; vertical-align: 2px; }
+  .key.dash { height: 0; border-top: 2px dashed var(--text-3); border-radius: 0; vertical-align: 2px; }
+  svg text { font-family: Inter, system-ui, sans-serif; font-size: 9px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
+  svg text.value { fill: var(--text-2); font-weight: 600; }
+
+  .hero { position: relative; overflow: hidden; isolation: isolate; background: linear-gradient(140deg, #184f95, #2a78d6); color: #fff; border-radius: 22px; padding: 15px 15px 14px; box-shadow: 0 14px 30px -12px rgb(24 79 149 / 0.6); }
+  .hero .sheen { position: absolute; z-index: -1; width: 70%; height: 140%; left: -25%; top: -60%; background: radial-gradient(closest-side, rgb(255 255 255 / 0.22), transparent); }
+  .hero .top-row { display: flex; justify-content: space-between; align-items: center; }
+  .hero .label { opacity: 0.88; font-size: 12px; font-weight: 500; }
+  .mood { font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: rgb(255 255 255 / 0.2); }
+  .hero .big { font-size: 50px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 8px 0 5px; display: inline-block; transform-origin: left bottom; }
+  .hero .big small { font-size: 18px; font-weight: 600; opacity: 0.8; margin-left: 4px; letter-spacing: 0; }
+  .hero .sub { opacity: 0.9; font-size: 11.5px; }
+  .track { height: 5px; border-radius: 3px; background: rgb(255 255 255 / 0.22); overflow: hidden; margin-top: 12px; }
+  .fill { height: 100%; border-radius: 3px; background: #fff; transform-origin: left; }
+  .ends { display: flex; justify-content: space-between; font-size: 9.5px; opacity: 0.8; margin-top: 5px; }
+  .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+  .mini { background: rgb(255 255 255 / 0.14); border-radius: 11px; padding: 7px 9px; }
+  .mini .k { font-size: 9.5px; opacity: 0.85; }
+  .mini .v { font-size: 13px; font-weight: 700; margin-top: 1px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .tile { background: var(--surface-2); border-radius: 12px; padding: 8px 10px; }
+  .tile .v { font-weight: 700; font-size: 12.5px; margin-top: 1px; white-space: nowrap; }
+
+  .tabbar { position: absolute; z-index: 10; left: 0; right: 0; bottom: 0; height: 62px; padding-bottom: 8px; display: flex; background: rgb(255 255 255 / 0.86); border-top: 1px solid var(--line); }
+  .tabbar div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 9.5px; font-weight: 600; color: var(--text-3); }
+
+  .cat-row { padding: 8px 0; border-top: 1px solid var(--line); }
+  .cat-row:first-of-type { border-top: 0; }
+  .cat-head { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-bottom: 6px; }
+  .cat-head .r { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+  .cat-bar { height: 6px; background: var(--series-1); border-radius: 0 3px 3px 0; transform-origin: left; }
+  .net { font-size: 11px; color: var(--text-2); margin-top: 8px; position: relative; height: 16px; }
+  .net div { position: absolute; left: 0; top: 0; white-space: nowrap; }
+  .net b { color: var(--positive); }
+
+  /* Chat */
+  #chat { z-index: 15; background: var(--chat-bg); }
+  .chat-head { position: absolute; z-index: 5; left: 0; right: 0; top: 0; height: 88px; padding-top: 44px; display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 700; font-size: 15px; background: linear-gradient(var(--chat-bg) 80%, transparent); }
+  .chat-head .back { position: absolute; left: 16px; top: 52px; color: var(--text-2); }
+  .chat-body { position: absolute; left: 0; right: 0; top: 88px; bottom: 78px; overflow: hidden; }
+  .chat-msgs { position: absolute; left: 0; right: 0; top: 0; padding: 4px 16px 16px; }
+  .bubble { margin-left: auto; max-width: 82%; width: fit-content; background: #ebe9e1; border-radius: 18px 18px 4px 18px; padding: 10px 13px; font-size: 13px; line-height: 1.4; margin-top: 14px; transform-origin: right bottom; }
+  .toolchip { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); background: #f0eee6; border: 1px solid #e6e3d9; border-radius: 12px; padding: 7px 10px; margin-top: 8px; width: fit-content; }
+  .toolchip .st { width: 14px; height: 14px; position: relative; flex: none; }
+  .answer { font-size: 13px; line-height: 1.5; margin-top: 10px; white-space: pre-wrap; }
+  .answer .cursor { display: inline-block; width: 7px; height: 14px; background: var(--claude); border-radius: 2px; vertical-align: -2px; margin-left: 1px; }
+  .claude-row { display: flex; gap: 8px; align-items: center; margin-top: 14px; font-size: 11px; font-weight: 700; color: var(--text-2); }
+  .mini-chart { background: #fff; border: 1px solid #ebe8de; border-radius: 14px; padding: 10px 12px; margin-top: 10px; font-size: 11px; }
+  .mini-chart .row { display: grid; grid-template-columns: 62px 1fr 44px; align-items: center; gap: 8px; margin: 5px 0; }
+  .mini-chart .bar { height: 10px; border-radius: 0 4px 4px 0; transform-origin: left; }
+  .composer { position: absolute; left: 12px; right: 12px; bottom: 16px; height: 50px; background: #fff; border: 1px solid #e6e3d9; border-radius: 25px; display: flex; align-items: center; padding: 0 6px 0 16px; font-size: 13px; box-shadow: 0 4px 16px -8px rgb(0 0 0 / 0.15); }
+  .composer .txt { flex: 1; white-space: nowrap; overflow: hidden; }
+  .composer .ph { color: #a8a69e; }
+  .composer .caret { display: inline-block; width: 1.5px; height: 16px; background: var(--claude); vertical-align: -3px; margin-left: 1px; }
+  .send { width: 38px; height: 38px; border-radius: 50%; background: var(--claude); display: grid; place-items: center; flex: none; }
+
+  /* Finger */
+  #finger { position: absolute; z-index: 50; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgb(255 255 255 / 0.55); border: 2px solid rgb(255 255 255 / 0.95); box-shadow: 0 6px 18px rgb(0 0 0 / 0.25); }
+  #ring { position: absolute; z-index: 49; border-radius: 50%; border: 3px solid rgb(255 255 255 / 0.95); }
+  #confetti { position: absolute; z-index: 60; left: 0; top: 0; width: 540px; height: 960px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob b1" id="b1"></div><div class="blob b2" id="b2"></div><div class="blob b3" id="b3"></div>
+  <div id="captions"></div>
+
+  <div class="center-block" id="intro">
+    <div class="app-icon" id="introIcon"><svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/></svg></div>
+    <h1 id="introTitle">Your private<br>money coach</h1>
+    <div class="lead" id="introLead">Bank sync, a live phone dashboard,<br>and Claude to answer anything.</div>
+  </div>
+
+  <div id="pipeline"></div>
+
+  <div id="phone">
+    <div class="screen" id="screen">
+      <div class="statusbar"><span>9:41</span><span id="sbIcons"></span></div>
+      <div class="island"></div>
+      <div class="app" id="home"><div class="scroll" id="homeScroll"></div></div>
+      <div class="app" id="months"><div class="scroll" id="monthsScroll"></div></div>
+      <div class="tabbar" id="tabbar"></div>
+      <div class="app" id="chat"></div>
+    </div>
+  </div>
+
+  <div class="center-block" id="outro"></div>
+  <div id="ring"></div>
+  <div id="finger"></div>
+  <canvas id="confetti" width="1080" height="1920"></canvas>
+</div>
+
+<script>
+const DURATION = 45;
+
+// --- Timing helpers ---
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const E = {
+  out: (p) => 1 - Math.pow(1 - p, 3),
+  inOut: (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2),
+  spring: (p) => (p >= 1 ? 1 : 1 - Math.exp(-6.5 * p) * Math.cos(9 * p)),
+  lin: (p) => p,
+};
+const prog = (t, start, dur, ease = E.out) => ease(clamp((t - start) / dur));
+// Visible between start and end with a fade at both ends.
+const window_ = (t, start, end, fade = 0.4) => Math.min(prog(t, start, fade), 1 - prog(t, end - fade, fade));
+const lerp = (a, b, p) => a + (b - a) * p;
+
+// Deterministic pseudo-random numbers (same video on every render).
+function rng(seed) {
+  return () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+}
+
+const $ = (id) => document.getElementById(id);
+const css = (el, styles) => Object.assign(el.style, styles);
+const euro = (v, d = 0) => `€${v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
+
+function columnPath(cx, w, top, base) {
+  const r = Math.max(0, Math.min(4, (base - top) / 2, w / 2));
+  const l = cx - w / 2;
+  return `M${l},${base}V${top + r}Q${l},${top} ${l + r},${top}H${l + w - r}Q${l + w},${top} ${l + w},${top + r}V${base}Z`;
+}
+const ICON = {
+  home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
+  list: "M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01",
+  months: "M4 20V11M10 20V5M16 20v-6M21 20H3",
+};
+const svgIcon = (name, size = 22, color = "currentColor") => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICON[name]}"/></svg>`;
+const claudeMark = (size) => {
+  const rays = Array.from({ length: 8 }, (_, i) => `<rect x="11" y="2" width="2" height="9" rx="1" transform="rotate(${i * 45} 12 12)"/>`).join("");
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="var(--claude)">${rays}</svg>`;
+};
+
+// --- Mock data ---
+const WEEK = { days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], values: [18, 42, 9, 71, 26, 12, null], budget: 62, today: 5 };
+const r1 = rng(11);
+const PACE = (() => {
+  const cum = (days, total) => {
+    const raw = Array.from({ length: days }, (_, i) => (i === 0 ? 0 : 20 + r1() * 90 + (i % 7 === 5 ? 60 : 0)));
+    const scale = total / raw.reduce((a, v) => a + v, 0);
+    let run = 0;
+    return raw.map((v) => (run += v * scale));
+  };
+  return { last: cum(31, 2188), cur: cum(24, 1652) };
+})();
+const BALANCE = (() => {
+  const r = rng(5);
+  const out = [];
+  let b = 260;
+  for (let d = 0; d < 175; d++) {
+    const dom = ((d + 2) % 30) + 1;
+    if (dom === 14) b += 2800;
+    if (dom === 1) b -= 950;
+    if (dom === 15) b -= 300;
+    b -= 25 + r() * 45;
+    out.push(b);
+  }
+  const shift = 3910 - out[out.length - 1];
+  return out.map((v, i) => v + (shift * i) / (out.length - 1));
+})();
+const MONTHS = { names: ["May", "Jun", "Jul", "Aug", "Sep", "Oct"], income: [2800, 2800, 2800, 2800, 2800, 2800], spent: [2350, 2620, 2210, 2480, 2188, 2060] };
+const CATS = [
+  { icon: "🛒", name: "Groceries", n: 14, total: 412, trend: [380, 402, 395, 430, 412, 288] },
+  { icon: "🍽️", name: "Eating out", n: 11, total: 214, trend: [240, 260, 230, 272, 214, 150] },
+  { icon: "🛍️", name: "Shopping", n: 4, total: 180, trend: [120, 310, 90, 160, 180, 95] },
+  { icon: "🚌", name: "Transport", n: 6, total: 96, trend: [90, 96, 96, 96, 96, 64] },
+];
+const Q1 = "How much did I spend eating out in September vs August?";
+const A1 = [["You spent "], ["€214", 1], [" on bars & eating out in September, down "], ["€58 (−21%)", 1], [" from August (€272).\n\nBiggest: "], ["Wolt €34", 1], [" on 12 Sep. You ate out 11 times, 4 fewer than in August."]];
+const Q2 = "Can I afford a €120 concert ticket?";
+const A2 = [["Yes. You have "], ["€1,240", 1], [" safe to spend until payday (Fri 13 Nov), after €630 of upcoming bills.\n\nThe ticket lowers your daily amount from "], ["€62", 1], [" to "], ["€56", 1], [". Enjoy the show 🎟️"]];
+
+// --- Timeline (seconds) ---
+const T = {
+  introOut: 4.3,
+  pipeIn: 4.6, pipeOut: 8.4,
+  phoneIn: 8.4,
+  heroCount: 9.3, tapHero: 12.7,
+  scrollWeek: 15.1, weekBars: 15.8,
+  scrollPace: 18.5, paceDraw: 18.9,
+  tapMonths: 21.0, balanceDraw: 21.5, monthBars: 22.5, swipe: 24.6, scrollCats: 25.7,
+  chatIn: 27.6, typeQ1: 28.2, sendQ1: 30.4, a1: 31.9, typeQ2: 34.7, sendQ2: 36.15, a2: 37.0,
+  phoneOut: 40.5, outroIn: 41.0,
+};
+const CAPTIONS = [
+  [T.pipeIn, T.pipeOut + 0.3, "Your bank syncs itself", "Read-only access copies every transaction<br>into a Google Sheet you own, every 4 hours."],
+  [T.phoneIn + 0.5, T.scrollWeek, "Know what you can<br>spend today", "Safe-to-spend updates after every sync."],
+  [T.scrollWeek, T.tapMonths - 0.3, "See your week<br>at a glance", "Daily spending against your budget, with streaks."],
+  [T.tapMonths - 0.3, T.chatIn - 0.2, "Every month,<br>side by side", "Balance, income vs. spending, category trends."],
+  [T.chatIn - 0.2, T.phoneOut, "Just ask Claude", "A custom skill reads your sheet and answers<br>from your real numbers."],
+];
+
+// --- Build the DOM once ---
+function build() {
+  $("captions").innerHTML = CAPTIONS.map(([, , title, sub]) => `<div class="caption"><h2>${title}</h2><p>${sub}</p></div>`).join("");
+  $("sbIcons").innerHTML = `<svg width="52" height="12" viewBox="0 0 52 12"><g fill="#0b0b0b"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="1" width="3" height="11" rx="1"/><rect x="26" y="1" width="21" height="10" rx="3" fill="none" stroke="#0b0b0b" stroke-width="1.2"/><rect x="28" y="3" width="15" height="6" rx="1.5"/><rect x="48.5" y="4" width="1.8" height="4" rx="1"/></g></svg>`;
+
+  $("pipeline").innerHTML = [
+    ["🏦", "#e7f0fb", "Your bank", "Read-only Open Banking access"],
+    ["⚙️", "#f1ecfb", "Apps Script", "Syncs & categorizes every 4 hours"],
+    ["📊", "#e3f5ec", "Google Sheet", "Your data, in your own Drive"],
+    ["✨", "#fbeee8", "Dashboard + Claude", "See it on your phone, ask anything"],
+  ].map(([ic, bg, title, sub], i) => `<div class="node" style="top:${i * 150}px"><div class="ic" style="background:${bg}">${ic}</div><div><b>${title}</b><span>${sub}</span></div></div>`).join("")
+    + [0, 1, 2].map((i) => `<div class="wire" style="top:${i * 150 + 92}px;height:58px"></div>`).join("")
+    + [0, 1, 2].map(() => `<div class="dot"></div>`).join("");
+
+  // Home
+  $("homeScroll").innerHTML = `
+    <header class="top"><div><div class="hello">Good evening 👋</div><h1>Finance</h1></div><span class="date">Saturday 24 Oct</span></header>
+    <span class="status">Bank access valid · 158 days</span>
+    <section class="hero" id="hero"><div class="sheen" id="sheen"></div>
+      <div class="top-row"><div class="label">You can spend today</div><span class="mood" id="mood">🌿 Good pace</span></div>
+      <div class="big num" id="heroBig"><span id="perDay">0</span><small>€</small></div>
+      <div class="sub">€1,240 until payday · 20 days</div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="ends"><span>Payday 14 Oct</span><span>Next Fri 13 Nov</span></div>
+      <div class="minis"><div class="mini"><div class="k">Cash</div><div class="v">€2,180</div></div><div class="mini"><div class="k">Credit card</div><div class="v">−€310</div></div><div class="mini"><div class="k">Bills</div><div class="v">−€630</div></div></div>
+    </section>
+    <h3>This week</h3>
+    <section class="card" id="weekCard">
+      <div class="muted small">Day-to-day spending · excl. bills</div>
+      <div class="figure num" id="weekFig">€0.00</div>
+      <span class="pill">↓ €36 less<span>than last week</span></span>
+      <div class="legend"><span><span class="key" style="background:var(--series-1)"></span>Daily spending</span><span><span class="key" style="background:var(--series-2)"></span>Over budget</span><span><span class="key dash"></span>Daily budget €62</span></div>
+      <div id="weekChart"></div>
+      <div class="tiles"><div class="tile" id="tile1"><div class="small muted">Streak</div><div class="v">🔥 2 days on budget</div></div><div class="tile" id="tile2"><div class="small muted">Biggest purchase</div><div class="v">Wolt €34</div></div></div>
+    </section>
+    <h3>This month</h3>
+    <section class="card" id="paceCard">
+      <div class="muted small">Spent</div>
+      <div class="figure num" id="paceFig">€1,652.40</div>
+      <span class="pill">↓ €248 less<span>than September by now</span></span>
+      <div class="legend"><span><span class="key line" style="background:var(--series-1)"></span>October</span><span><span class="key line" style="background:var(--series-muted)"></span>September</span></div>
+      <div id="paceChart"></div>
+    </section>`;
+
+  // Months
+  $("monthsScroll").innerHTML = `
+    <header class="top"><div><h1>Months</h1></div></header>
+    <section class="card" id="balCard">
+      <div class="muted small">Total balance, card debt subtracted</div>
+      <div class="figure num" id="balFig">€0.00</div>
+      <span class="pill">↑ €3,648<span>since 3 May</span></span>
+      <div id="balChart" style="margin-top:10px"></div>
+    </section>
+    <section class="card" id="incCard">
+      <div class="muted small">Income and spending · tap or swipe</div>
+      <div class="legend"><span><span class="key" style="background:var(--series-3)"></span>Income</span><span><span class="key" style="background:var(--series-1)"></span>Spending</span></div>
+      <div id="incChart"></div>
+      <div class="net"><div id="netOct"><b>Saved €740</b> · 26% of income · month in progress</div><div id="netSep"><b>Saved €612</b> · 22% of income</div></div>
+    </section>
+    <h3 id="catTitle">September</h3>
+    <section class="card" id="catCard">
+      <div class="muted small" style="margin-bottom:2px">Categories · tap to see transactions</div>
+      ${CATS.map((c, i) => `<div class="cat-row"><div class="cat-head"><span>${c.icon} ${c.name} <span class="muted small">· ${c.n}</span></span><span class="r"><span id="spark${i}"></span><span class="num">${euro(c.total, 2)}</span></span></div><div class="cat-bar" id="catBar${i}" style="width:${(c.total / CATS[0].total) * 100}%"></div></div>`).join("")}
+    </section>`;
+
+  $("tabbar").innerHTML = [["home", "Home"], ["list", "Activity"], ["months", "Months"]].map(([ic, label], i) => `<div id="tab${i}">${svgIcon(ic)}${label}</div>`).join("");
+
+  // Chat
+  $("chat").innerHTML = `
+    <div class="chat-head"><svg class="back" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>${claudeMark(18)}<span>Claude</span></div>
+    <div class="chat-body"><div class="chat-msgs" id="msgs">
+      <div class="bubble" id="u1">${Q1}</div>
+      <div class="claude-row" id="c1">${claudeMark(16)}Claude</div>
+      <div class="toolchip" id="tc1a"><span class="st" id="st1a"></span>Using skill · personal-finance</div>
+      <div class="toolchip" id="tc1b"><span class="st" id="st1b"></span>Reading Google Sheet · Finance</div>
+      <div class="answer" id="ans1"></div>
+      <div class="mini-chart" id="mc1">
+        <div class="row"><span>August</span><div class="bar" id="mcA" style="background:var(--series-muted);width:100%"></div><b class="num">€272</b></div>
+        <div class="row"><span>September</span><div class="bar" id="mcS" style="background:var(--series-1);width:78.7%"></div><b class="num">€214</b></div>
+      </div>
+      <div class="bubble" id="u2">${Q2}</div>
+      <div class="claude-row" id="c2">${claudeMark(16)}Claude</div>
+      <div class="toolchip" id="tc2"><span class="st" id="st2"></span>Reading Google Sheet · Finance</div>
+      <div class="answer" id="ans2"></div>
+    </div></div>
+    <div class="composer"><span class="txt" id="composer"></span><span class="send" id="send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span></div>`;
+
+  $("outro").innerHTML = `
+    <h1 id="outTitle" style="margin:0">Your finances,<br>on autopilot</h1>
+    ${[
+      ["🏦", "Bank sync every 4 hours", "Read-only, straight into Google Sheets"],
+      ["📱", "Live phone dashboard", "Budget, weekly streaks, monthly trends"],
+      ["✨", "Ask Claude anything", "A skill that knows your sheet"],
+      ["🔒", "Private by design", "Your data stays in your own Google account"],
+    ].map(([ic, a, b], i) => `<div class="feature" id="feat${i}"><span class="ic">${ic}</span><div>${a}<small>${b}</small></div></div>`).join("")}
+    <div class="credit" id="credit">Built with Claude Code · Google Apps Script</div>`;
+}
+
+// Charts are drawn once at full size; seek() only reveals them.
+const charts = {};
+function buildCharts() {
+  // Week
+  {
+    const W = $("weekChart").clientWidth, H = 104, base = H - 18, top = 16;
+    const max = 85;
+    const y = (v) => base - (v / max) * (base - top);
+    const slot = W / 7, bw = Math.min(20, slot * 0.5);
+    let out = `<line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="var(--line)"/>`;
+    const groups = [];
+    WEEK.values.forEach((v, i) => {
+      const cx = slot * i + slot / 2;
+      if (v == null) out += `<circle cx="${cx}" cy="${base - 3}" r="2.2" fill="var(--series-muted)"/>`;
+      else {
+        const under = Math.min(v, WEEK.budget), uTop = y(under);
+        let g = v > WEEK.budget
+          ? `<rect x="${cx - bw / 2}" y="${uTop + 1}" width="${bw}" height="${base - uTop - 1}" fill="var(--series-1)"/><path d="${columnPath(cx, bw, y(v), uTop - 1)}" fill="var(--series-2)"/>`
+          : `<path d="${columnPath(cx, bw, uTop, base)}" fill="var(--series-1)"/>`;
+        out += `<g id="wb${i}">${g}</g>`;
+        groups.push(i);
+        if (i === WEEK.today) out += `<text id="wbLabel" x="${cx}" y="${y(v) - 5}" text-anchor="middle" class="value">${v}</text>`;
+      }
+      out += `<text x="${cx}" y="${H - 4}" text-anchor="middle" class="${i === WEEK.today ? "value" : ""}">${WEEK.days[i]}</text>`;
+    });
+    out += `<line id="budgetLine" x1="0" x2="${W}" y1="${y(WEEK.budget)}" y2="${y(WEEK.budget)}" stroke="var(--text-3)" stroke-width="1.3" stroke-dasharray="4 4"/>`;
+    $("weekChart").innerHTML = `<svg width="${W}" height="${H}" style="display:block;overflow:visible">${out}</svg>`;
+    charts.week = { base, groups, W };
+  }
+  // Pace
+  {
+    const W = $("paceChart").clientWidth, H = 120, pl = 26, pr = 30, pt = 8, pb = 18;
+    const max = 2500;
+    const x = (i) => pl + (i / 30) * (W - pl - pr);
+    const y = (v) => pt + (1 - v / max) * (H - pt - pb);
+    const path = (a) => a.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    let out = "";
+    for (const v of [0, 1000, 2000]) out += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl - 5}" y="${y(v) + 3}" text-anchor="end">${v ? v / 1000 + "k" : 0}</text>`;
+    for (const d of [1, 10, 20, 30]) out += `<text x="${x(d - 1)}" y="${H - 3}" text-anchor="middle">${d}</text>`;
+    const c = PACE.cur, n = c.length - 1;
+    out += `<path id="paceArea" d="${path(c)}L${x(n)},${y(0)}L${x(0)},${y(0)}Z" fill="var(--series-1)" opacity="0.1"/>`;
+    out += `<path id="paceLast" d="${path(PACE.last)}" fill="none" stroke="var(--series-muted)" stroke-width="2" stroke-linejoin="round"/>`;
+    out += `<path id="paceLine" d="${path(c)}" fill="none" stroke="var(--series-1)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    out += `<g id="paceEnd"><circle cx="${x(n)}" cy="${y(c[n])}" r="4" fill="var(--series-1)" stroke="#fff" stroke-width="2"/><text x="${x(n) + 7}" y="${y(c[n]) + 3}" class="value">1.7k</text></g>`;
+    $("paceChart").innerHTML = `<svg width="${W}" height="${H}" style="display:block;overflow:visible">${out}</svg>`;
+  }
+  // Balance
+  {
+    const W = $("balChart").clientWidth, H = 110, pl = 24, pr = 30, pt = 6, pb = 18;
+    const max = 6000, n = BALANCE.length;
+    const x = (i) => pl + (i / (n - 1)) * (W - pl - pr);
+    const y = (v) => pt + (1 - v / max) * (H - pt - pb);
+    const path = BALANCE.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    let out = "";
+    for (const v of [0, 2000, 4000, 6000]) out += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl - 5}" y="${y(v) + 3}" text-anchor="end">${v ? v / 1000 + "k" : 0}</text>`;
+    ["Jun", "Jul", "Aug", "Sep", "Oct"].forEach((m, i) => (out += `<text x="${x(29 + i * 30)}" y="${H - 3}" text-anchor="middle">${m}</text>`));
+    out += `<path id="balArea" d="${path}L${x(n - 1)},${y(0)}L${x(0)},${y(0)}Z" fill="var(--series-1)" opacity="0.1"/>`;
+    out += `<path id="balLine" d="${path}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round"/>`;
+    out += `<g id="balEnd"><circle cx="${x(n - 1)}" cy="${y(BALANCE[n - 1])}" r="4" fill="var(--series-1)" stroke="#fff" stroke-width="2"/><text x="${x(n - 1) + 7}" y="${y(BALANCE[n - 1]) + 3}" class="value">3.9k</text></g>`;
+    $("balChart").innerHTML = `<svg width="${W}" height="${H}" style="display:block;overflow:visible">${out}</svg>`;
+  }
+  // Income vs spending
+  {
+    const W = $("incChart").clientWidth, H = 124, base = H - 18, top = 16, max = 2900;
+    const slot = W / 6, bw = Math.min(16, slot * 0.3);
+    let out = `<line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="var(--line)"/>`;
+    MONTHS.names.forEach((m, i) => {
+      const c = slot * i + slot / 2;
+      [[MONTHS.income[i], "var(--series-3)", c - bw / 2 - 1, "i"], [MONTHS.spent[i], "var(--series-1)", c + bw / 2 + 1, "s"]].forEach(([v, fill, cx, k]) => {
+        const tp = base - (v / max) * (base - top);
+        out += `<path id="mb${k}${i}" d="${columnPath(cx, bw, tp, base)}" fill="${fill}"/>`;
+        if (i >= 4) out += `<text id="ml${k}${i}" x="${cx}" y="${tp - 5}" text-anchor="middle" class="value">${(v / 1000).toFixed(1)}k</text>`;
+      });
+      out += `<text id="mn${i}" x="${c}" y="${H - 4}" text-anchor="middle">${m}</text>`;
+    });
+    $("incChart").innerHTML = `<svg width="${W}" height="${H}" style="display:block;overflow:visible">${out}</svg>`;
+    charts.inc = { base };
+  }
+  // Category sparklines (September highlighted)
+  CATS.forEach((c, i) => {
+    const max = Math.max(...c.trend), h = 16, w = 4, g = 2;
+    const bars = c.trend.map((v, j) => `<path d="${columnPath(j * (w + g) + w / 2, w, h - Math.max(1, (v / max) * h), h)}" fill="${j === 4 ? "var(--series-1)" : "var(--series-muted)"}"/>`).join("");
+    $(`spark${i}`).innerHTML = `<svg width="${6 * (w + g) - g}" height="${h}" style="display:block">${bars}</svg>`;
+  });
+  // Path lengths for line drawing
+  for (const id of ["paceLine", "paceLast", "balLine"]) {
+    const el = $(id), len = el.getTotalLength();
+    el.style.strokeDasharray = `${len}`;
+    charts[id] = len;
+  }
+  charts.budgetLen = charts.week.W;
+}
+
+// --- Geometry in stage coordinates (works when the stage is scaled for preview) ---
+function rectOf(el) {
+  const s = $("stage").getBoundingClientRect(), r = el.getBoundingClientRect(), k = s.width / 540;
+  return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k, cx: (r.left - s.left + r.width / 2) / k, cy: (r.top - s.top + r.height / 2) / k };
+}
+
+// --- Streamed text ---
+function streamed(segments, chars, showCursor) {
+  let left = chars, html = "";
+  for (const [text, bold] of segments) {
+    if (left <= 0) break;
+    const part = text.slice(0, left).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    left -= text.length;
+    html += bold ? `<b>${part}</b>` : part;
+  }
+  return html + (showCursor ? `<span class="cursor"></span>` : "");
+}
+const totalLen = (segs) => segs.reduce((a, [t]) => a + t.length, 0);
+
+function statusIcon(el, t, start, done) {
+  if (t < done) {
+    const a = ((t - start) * 360 * 1.4) % 360;
+    el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" style="transform:rotate(${a}deg)"><circle cx="12" cy="12" r="9" fill="none" stroke="#d6d2c4" stroke-width="3"/><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="var(--claude)" stroke-width="3" stroke-linecap="round"/></svg>`;
+  } else {
+    const p = prog(t, done, 0.35, E.spring);
+    el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" style="transform:scale(${p})"><circle cx="12" cy="12" r="11" fill="var(--series-3)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+}
+
+// --- Finger gestures ---
+const GESTURES = [
+  { start: 12.0, end: 13.2, from: () => off(rectOf($("heroBig")), 70, 90), to: () => off(rectOf($("heroBig")), -10, 6), move: [12.0, 12.55], taps: [T.tapHero] },
+  { start: 20.3, end: 21.5, from: () => off(rectOf($("tab2")), -60, 50), to: () => off(rectOf($("tab2")), 0, -4), move: [20.3, 20.85], taps: [T.tapMonths] },
+  { start: 24.2, end: 25.4, from: () => off(rectOf($("incChart")), -80, 0), to: () => off(rectOf($("incChart")), 80, 0), move: [24.55, 25.05], press: [24.5, 25.05] },
+  { start: 29.9, end: 30.8, from: () => off(rectOf($("send")), 40, 60), to: () => off(rectOf($("send")), 0, 0), move: [29.9, 30.3], taps: [T.sendQ1 - 0.05] },
+  { start: 35.6, end: 36.55, from: () => off(rectOf($("send")), 40, 60), to: () => off(rectOf($("send")), 0, 0), move: [35.6, 36.0], taps: [T.sendQ2 - 0.05] },
+];
+const off = (r, dx, dy) => ({ x: r.cx + dx, y: r.cy + dy });
+
+function drawFinger(t) {
+  const finger = $("finger"), ring = $("ring");
+  const g = GESTURES.find((g) => t >= g.start && t <= g.end);
+  if (!g) {
+    finger.style.opacity = 0;
+    ring.style.opacity = 0;
+    return;
+  }
+  const a = g.from(), b = g.to(), p = prog(t, g.move[0], g.move[1] - g.move[0], E.inOut);
+  const x = lerp(a.x, b.x, p), y = lerp(a.y, b.y, p);
+  const pressed = (g.taps || []).some((tap) => t >= tap - 0.08 && t <= tap + 0.1) || (g.press && t >= g.press[0] && t <= g.press[1]);
+  css(finger, { left: `${x}px`, top: `${y}px`, opacity: window_(t, g.start, g.end, 0.2), transform: `scale(${pressed ? 0.82 : 1})` });
+  const tap = (g.taps || []).find((tap) => t >= tap && t <= tap + 0.5);
+  if (tap != null) {
+    const rp = prog(t, tap, 0.5), size = 30 + 50 * rp;
+    css(ring, { left: `${x - size / 2}px`, top: `${y - size / 2}px`, width: `${size}px`, height: `${size}px`, opacity: 1 - rp });
+  } else ring.style.opacity = 0;
+}
+
+// --- Confetti (analytic, so any frame can be drawn on its own) ---
+const BITS = (() => {
+  const r = rng(42), colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#6250d6"];
+  return Array.from({ length: 110 }, (_, i) => {
+    const angle = -Math.PI / 2 + (r() - 0.5) * 2.4, speed = 380 + r() * 520;
+    return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, rot: r() * 6, spin: (r() - 0.5) * 14, w: 6 + r() * 6, h: 4 + r() * 5, color: colors[i % colors.length] };
+  });
+})();
+let confettiOrigin = null;
+function drawConfetti(t) {
+  const c = $("confetti"), ctx = c.getContext("2d");
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  ctx.clearRect(0, 0, 540, 960);
+  const age = t - T.tapHero;
+  if (age < 0 || age > 2.2) return;
+  if (!confettiOrigin) {
+    const r = rectOf($("heroBig"));
+    confettiOrigin = { x: r.cx - 10, y: r.cy };
+  }
+  const k = 2.2, g = 900;
+  for (const b of BITS) {
+    const d = (1 - Math.exp(-k * age)) / k;
+    const x = confettiOrigin.x + b.vx * d, y = confettiOrigin.y + b.vy * d + 0.5 * g * age * age * 0.55;
+    ctx.save();
+    ctx.globalAlpha = clamp(1 - Math.pow(age / 2.2, 3));
+    ctx.translate(x, y);
+    ctx.rotate(b.rot + b.spin * age);
+    ctx.fillStyle = b.color;
+    ctx.fillRect(-b.w / 2, -b.h / 2, b.w, Math.abs(Math.cos((b.rot + b.spin * age) * 1.7)) * b.h + 1);
+    ctx.restore();
+  }
+}
+
+// --- seek(t): draw the frame at t seconds ---
+function seek(t) {
+  // Background drift
+  css($("b1"), { transform: `translate(${Math.sin(t * 0.3) * 40}px, ${Math.cos(t * 0.25) * 30}px)` });
+  css($("b2"), { transform: `translate(${Math.cos(t * 0.27) * 40}px, ${Math.sin(t * 0.33) * 40}px)` });
+  css($("b3"), { transform: `translate(${Math.sin(t * 0.21) * 30}px, ${Math.cos(t * 0.3) * 40}px)` });
+
+  // Captions
+  [...$("captions").children].forEach((el, i) => {
+    const [start, end] = CAPTIONS[i];
+    const o = window_(t, start, end, 0.45), rise = 1 - prog(t, start, 0.6);
+    css(el, { opacity: o, transform: `translateY(${rise * 18}px)`, visibility: o > 0 ? "visible" : "hidden" });
+  });
+
+  // Intro
+  {
+    const out = prog(t, T.introOut, 0.5, E.inOut);
+    const icon = prog(t, 0.15, 0.9, E.spring), title = prog(t, 0.6, 0.7), lead = prog(t, 1.1, 0.7);
+    css($("intro"), { opacity: 1 - out, transform: `translateY(${-out * 40}px)`, visibility: out < 1 ? "visible" : "hidden" });
+    css($("introIcon"), { transform: `scale(${icon}) rotate(${(1 - icon) * -20}deg)` });
+    css($("introTitle"), { opacity: title, transform: `translateY(${(1 - title) * 24}px)` });
+    css($("introLead"), { opacity: lead, transform: `translateY(${(1 - lead) * 20}px)` });
+  }
+
+  // Pipeline
+  {
+    const pipe = $("pipeline"), nodes = pipe.querySelectorAll(".node"), wires = pipe.querySelectorAll(".wire"), dots = pipe.querySelectorAll(".dot");
+    const out = prog(t, T.pipeOut, 0.6, E.inOut);
+    css(pipe, { opacity: 1 - out, transform: `translateY(${-out * 60}px) scale(${1 - out * 0.06})`, visibility: t > T.pipeIn - 0.1 && out < 1 ? "visible" : "hidden" });
+    nodes.forEach((n, i) => {
+      const p = prog(t, T.pipeIn + 0.2 + i * 0.45, 0.7, E.spring);
+      css(n, { opacity: clamp(p * 1.5), transform: `translateX(${(1 - p) * (i % 2 ? 60 : -60)}px) scale(${0.9 + 0.1 * p})` });
+    });
+    wires.forEach((w, i) => {
+      const p = prog(t, T.pipeIn + 0.55 + i * 0.45, 0.4);
+      css(w, { transformOrigin: "top", transform: `scaleY(${p})` });
+    });
+    dots.forEach((d, i) => {
+      const live = t - (T.pipeIn + 0.9 + i * 0.45);
+      const phase = live > 0 ? (live * 0.9) % 1 : -1;
+      css(d, { top: `${i * 150 + 92 + phase * 46}px`, opacity: phase < 0 ? 0 : Math.sin(phase * Math.PI) });
+    });
+  }
+
+  // Phone in/out
+  {
+    const inP = prog(t, T.phoneIn, 1.0, E.out), outP = prog(t, T.phoneOut, 0.6, E.inOut);
+    css($("phone"), {
+      transform: `translateY(${(1 - inP) * 760 + outP * 40}px) scale(${1 - outP * 0.08})`,
+      opacity: 1 - outP,
+      visibility: t > T.phoneIn && outP < 1 ? "visible" : "hidden",
+    });
+  }
+
+  // Screens: home → months → chat
+  {
+    const sw = prog(t, T.tapMonths + 0.05, 0.5, E.inOut);
+    css($("home"), { transform: `translateX(${-sw * 100}%)` });
+    css($("months"), { transform: `translateX(${(1 - sw) * 100}%)` });
+    const ch = prog(t, T.chatIn, 0.6, E.inOut);
+    css($("chat"), { transform: `translateY(${(1 - ch) * 100}%)`, visibility: ch > 0 ? "visible" : "hidden" });
+    // Status bar background follows the screen underneath.
+    document.querySelector(".statusbar").style.setProperty("--sb", ch > 0.5 ? "#faf9f5" : "#eef1f6");
+    const active = t >= T.tapMonths ? 2 : 0;
+    [0, 1, 2].forEach((i) => {
+      const el = $(`tab${i}`), on = i === active;
+      const pop = on ? prog(t, active === 2 ? T.tapMonths : T.phoneIn, 0.45, E.spring) : 1;
+      el.style.color = on ? "var(--series-1)" : "var(--text-3)";
+      el.firstChild.style.transform = on && pop < 1 ? `translateY(${-Math.sin(pop * Math.PI) * 3}px) scale(${1 + Math.sin(pop * Math.PI) * 0.18})` : "";
+    });
+  }
+
+  // Home: hero
+  {
+    const p = prog(t, T.heroCount, 1.2);
+    $("perDay").textContent = Math.round(62 * p);
+    css($("fill"), { transform: `scaleX(${0.33 * prog(t, T.heroCount + 0.1, 1.0)})` });
+    const mood = prog(t, T.heroCount + 1.1, 0.5, E.spring);
+    css($("mood"), { transform: `scale(${mood})`, opacity: clamp(mood * 2) });
+    const bump = t > T.tapHero ? Math.exp(-(t - T.tapHero) * 5) * Math.sin((t - T.tapHero) * 18) * 0.12 : 0;
+    css($("heroBig"), { transform: `scale(${1 + bump})` });
+    css($("sheen"), { transform: `translate(${(Math.sin(t * 0.35) * 0.5 + 0.5) * 120}%, ${(Math.cos(t * 0.3) * 0.5 + 0.5) * 45}%)` });
+  }
+
+  // Home: scroll positions
+  {
+    const weekTop = $("weekCard").offsetTop - 70, paceTop = $("paceCard").offsetTop - 230;
+    const s1 = prog(t, T.scrollWeek, 0.9, E.inOut) * weekTop, s2 = prog(t, T.scrollPace, 0.9, E.inOut) * (paceTop - weekTop);
+    css($("homeScroll"), { transform: `translateY(${-(s1 + s2)}px)` });
+  }
+
+  // Home: week card
+  {
+    $("weekFig").textContent = euro(148.2 * prog(t, T.heroCount + 0.6, 1.2), 2);
+    charts.week.groups.forEach((i, n) => {
+      const p = prog(t, T.weekBars + n * 0.08, 0.6, E.out);
+      $(`wb${i}`).setAttribute("transform", `translate(0 ${charts.week.base * (1 - p)}) scale(1 ${Math.max(p, 0.0001)})`);
+    });
+    css($("wbLabel"), { opacity: prog(t, T.weekBars + 0.6, 0.3) });
+    $("budgetLine").style.opacity = prog(t, T.weekBars + 0.5, 0.5);
+    ["tile1", "tile2"].forEach((id, i) => {
+      const p = prog(t, T.weekBars + 0.9 + i * 0.15, 0.5, E.spring);
+      css($(id), { transform: `scale(${0.85 + 0.15 * p})`, opacity: clamp(p * 1.4) });
+    });
+  }
+
+  // Home: pace chart
+  {
+    const p = prog(t, T.paceDraw, 1.1, E.inOut);
+    $("paceLine").style.strokeDashoffset = charts.paceLine * (1 - p);
+    $("paceLast").style.strokeDashoffset = charts.paceLast * (1 - prog(t, T.paceDraw - 0.2, 1.1, E.inOut));
+    $("paceArea").style.opacity = 0.1 * prog(t, T.paceDraw + 0.6, 0.6);
+    $("paceEnd").style.opacity = prog(t, T.paceDraw + 1.0, 0.3);
+  }
+
+  // Months: balance
+  {
+    const p = prog(t, T.balanceDraw, 1.2, E.inOut);
+    $("balLine").style.strokeDashoffset = charts.balLine * (1 - p);
+    $("balArea").style.opacity = 0.1 * prog(t, T.balanceDraw + 0.7, 0.6);
+    $("balEnd").style.opacity = prog(t, T.balanceDraw + 1.1, 0.3);
+    $("balFig").textContent = euro(3910 * prog(t, T.balanceDraw - 0.1, 1.2), 2);
+  }
+
+  // Months: income vs spending, swipe from October to September
+  {
+    const sel = prog(t, T.swipe + 0.4, 0.3, E.inOut); // 0 = October selected, 1 = September
+    MONTHS.names.forEach((_, i) => {
+      const grow = prog(t, T.monthBars + i * 0.07, 0.6);
+      const on = i === 5 ? 1 - sel : i === 4 ? sel : 0;
+      for (const k of ["i", "s"]) {
+        const el = $(`mb${k}${i}`);
+        el.setAttribute("transform", `translate(0 ${charts.inc.base * (1 - grow)}) scale(1 ${Math.max(grow, 0.0001)})`);
+        el.setAttribute("opacity", 0.35 + 0.65 * on);
+        const label = $(`ml${k}${i}`);
+        if (label) label.setAttribute("opacity", on * prog(t, T.monthBars + 0.6, 0.3));
+      }
+      const name = $(`mn${i}`);
+      name.setAttribute("class", on > 0.5 ? "value" : "");
+    });
+    const netIn = prog(t, T.monthBars + 0.5, 0.4);
+    css($("netOct"), { opacity: netIn * (1 - sel), transform: `translateX(${sel * 30}px)` });
+    css($("netSep"), { opacity: sel, transform: `translateX(${(1 - sel) * -30}px)` });
+    const sc = prog(t, T.scrollCats, 0.8, E.inOut) * ($("catTitle").offsetTop - 300);
+    css($("monthsScroll"), { transform: `translateY(${-sc}px)` });
+    CATS.forEach((_, i) => css($(`catBar${i}`), { transform: `scaleX(${prog(t, T.scrollCats + 0.3 + i * 0.08, 0.6)})` }));
+  }
+
+  // Chat
+  {
+    const typing = (text, start) => text.slice(0, Math.floor(clamp((t - start) * 28, 0, text.length)));
+    let draft = "", caret = false;
+    if (t >= T.typeQ1 && t < T.sendQ1) [draft, caret] = [typing(Q1, T.typeQ1), true];
+    else if (t >= T.typeQ2 && t < T.sendQ2) [draft, caret] = [typing(Q2, T.typeQ2), true];
+    const blink = Math.floor(t * 2.2) % 2 === 0;
+    $("composer").innerHTML = draft ? `${draft}${caret ? `<span class="caret"></span>` : ""}` : `<span class="ph">Reply to Claude…</span>${t > T.chatIn + 0.5 && blink && t < T.typeQ1 ? `<span class="caret"></span>` : ""}`;
+    const show = (id, at, mode = "pop") => {
+      const el = $(id), p = prog(t, at, 0.45, mode === "pop" ? E.spring : E.out);
+      css(el, { display: t >= at ? "" : "none", opacity: clamp(p * 1.5), transform: mode === "pop" ? `scale(${0.6 + 0.4 * p})` : `translateY(${(1 - p) * 8}px)` });
+    };
+    show("u1", T.sendQ1);
+    show("c1", T.sendQ1 + 0.3, "fade");
+    show("tc1a", T.sendQ1 + 0.4, "fade");
+    statusIcon($("st1a"), t, T.sendQ1 + 0.4, T.sendQ1 + 1.0);
+    show("tc1b", T.sendQ1 + 0.75, "fade");
+    statusIcon($("st1b"), t, T.sendQ1 + 0.75, T.a1 - 0.1);
+    const n1 = Math.floor(clamp((t - T.a1) * 75, 0, totalLen(A1)));
+    $("ans1").style.display = t >= T.a1 ? "" : "none";
+    $("ans1").innerHTML = streamed(A1, n1, n1 < totalLen(A1));
+    const a1Done = T.a1 + totalLen(A1) / 75;
+    show("mc1", a1Done + 0.1, "fade");
+    css($("mcA"), { transform: `scaleX(${prog(t, a1Done + 0.25, 0.6)})` });
+    css($("mcS"), { transform: `scaleX(${prog(t, a1Done + 0.4, 0.6)})` });
+    show("u2", T.sendQ2);
+    show("c2", T.sendQ2 + 0.3, "fade");
+    show("tc2", T.sendQ2 + 0.4, "fade");
+    statusIcon($("st2"), t, T.sendQ2 + 0.4, T.a2 - 0.1);
+    const n2 = Math.floor(clamp((t - T.a2) * 75, 0, totalLen(A2)));
+    $("ans2").style.display = t >= T.a2 ? "" : "none";
+    $("ans2").innerHTML = streamed(A2, n2, n2 < totalLen(A2));
+    // Keep the newest message in view, easing towards the bottom.
+    const body = $("msgs").parentElement, msgs = $("msgs");
+    const overflow = Math.max(0, msgs.offsetHeight - body.clientHeight);
+    seek.chatScroll = t < T.chatIn ? 0 : lerp(seek.chatScroll || 0, overflow, seek.lastT != null && t > seek.lastT ? clamp((t - seek.lastT) * 9) : 1);
+    css(msgs, { transform: `translateY(${-seek.chatScroll}px)` });
+    seek.lastT = t;
+  }
+
+  // Outro
+  {
+    const vis = t > T.outroIn - 0.1;
+    css($("outro"), { visibility: vis ? "visible" : "hidden" });
+    const title = prog(t, T.outroIn, 0.8, E.spring);
+    css($("outTitle"), { opacity: clamp(title * 1.5), transform: `translateY(${(1 - title) * 30}px)` });
+    for (let i = 0; i < 4; i++) {
+      const p = prog(t, T.outroIn + 0.5 + i * 0.2, 0.7, E.spring);
+      css($(`feat${i}`), { opacity: clamp(p * 1.5), transform: `translateX(${(1 - p) * (i % 2 ? 50 : -50)}px)` });
+    }
+    css($("credit"), { opacity: prog(t, T.outroIn + 1.6, 0.6) });
+  }
+
+  drawFinger(t);
+  drawConfetti(t);
+}
+
+// --- Boot ---
+const RENDER = new URLSearchParams(location.search).has("render");
+function fit() {
+  if (RENDER) return;
+  const k = Math.min(innerWidth / 540, innerHeight / 960);
+  $("stage").style.transform = `scale(${k})`;
+}
+window.ready = document.fonts.ready.then(() => {
+  build();
+  buildCharts();
+  fit();
+  seek(0);
+  if (!RENDER) {
+    // Live playback, looping; click to restart.
+    let start = performance.now();
+    addEventListener("click", () => ((start = performance.now()), (seek.chatScroll = 0), (seek.lastT = null)));
+    const loop = (now) => {
+      let t = (now - start) / 1000;
+      if (t > DURATION) {
+        start = now;
+        t = 0;
+        seek.chatScroll = 0;
+        seek.lastT = null;
+      }
+      seek(t);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+});
+addEventListener("resize", fit);
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Secrets and personal financial data: never commit
+.env
+secrets/*
+!secrets/.gitkeep
+data/
+
+node_modules/
+
+# clasp link to my Apps Script project (ids, not secrets, but personal)
+.clasp.json
+.clasprc.json
+
+# Built files (skill zip)
+dist/
+
+# Personal session notes (the repo is public)
+HANDOFF.md

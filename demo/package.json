@@ -1,0 +1,16 @@
+{
+  "name": "finance-demo",
+  "private": true,
+  "type": "module",
+  "description": "45-second demo video of the finance app, rendered from index.html (mock data only)",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright-core": "^1.48.0"
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.3.0": true
+  }
+}

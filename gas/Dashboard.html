@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<script>
+  // Theme before first paint: the saved choice, otherwise the system setting.
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem("theme"); } catch (e) {}
+    document.documentElement.dataset.theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --bg: #f3f4f6;
+    --surface: #ffffff;
+    --surface-2: #f1f3f5;
+    --line: #e3e6ea;
+    --line-strong: #d3d8de;
+    --text: #0c1116;
+    --text-2: #4a5360;
+    --text-3: #7b8491;
+    --series-1: #2f5bea;
+    --series-2: #f0702e;
+    --series-3: #10a374;
+    --series-muted: #c7ccd3;
+    --positive: #0b8452;
+    --positive-bg: #e5f4ec;
+    --negative: #cc3a2f;
+    --negative-bg: #fcebe9;
+    --warning: #f0a416;
+    --warning-bg: #fff6de;
+    --warning-text: #7f5600;
+    --critical: #d93a2f;
+    --ink: #0b1220;
+    --shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+    --bg-top: #fbfbfc;
+    --bar-bg: rgb(255 255 255 / 0.88);
+    --tile-base: #fff;
+    --tile-ink: #000;
+    --selected-bg: var(--ink);
+    --selected-text: #fff;
+    /* Hero panel: light graph paper here, the dark instrument panel in dark mode. */
+    --hero-bg: #ffffff;
+    --hero-border: var(--line-strong);
+    --hero-grid: rgb(47 91 234 / 0.06);
+    --hero-line: var(--line);
+    --hero-glow: 14%;
+    --hero-text: var(--text);
+    --hero-strong: var(--text);
+    --hero-dim: var(--text-2);
+    --hero-faint: var(--text-3);
+    --hero-track: var(--surface-2);
+    --hero-chip-line: var(--line-strong);
+    --hero-chip-bg: var(--surface-2);
+    --hero-shadow: 0 14px 30px -18px rgb(16 24 40 / 0.22);
+    --tone-cool: #2f5bea;
+    --tone-warm: #d98a00;
+    --tone-hot: #d93a2f;
+    --radius: 12px;
+    --tabbar: 60px;
+    --ease: cubic-bezier(0.2, 0.9, 0.25, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #07090d;
+    --bg-top: #0b0f16;
+    --surface: #0f141b;
+    --surface-2: #161c25;
+    --line: #1d242e;
+    --line-strong: #2a323e;
+    --text: #e7ecf3;
+    --text-2: #a3adba;
+    --text-3: #6d7886;
+    --series-1: #5b86ff;
+    --series-2: #ff8a4c;
+    --series-3: #2cc28e;
+    --series-muted: #39424f;
+    --positive: #3ccf8e;
+    --positive-bg: rgb(60 207 142 / 0.12);
+    --negative: #ff6b5e;
+    --negative-bg: rgb(255 107 94 / 0.12);
+    --warning: #f5b13d;
+    --warning-bg: rgb(245 177 61 / 0.1);
+    --warning-text: #f5c56b;
+    --critical: #ff5a4a;
+    --ink: #0d1524;
+    --hero-bg: var(--ink);
+    --hero-border: #1f2b40;
+    --hero-grid: rgb(255 255 255 / 0.09);
+    --hero-line: rgb(255 255 255 / 0.09);
+    --hero-glow: 32%;
+    --hero-text: #e9eef6;
+    --hero-strong: #fff;
+    --hero-dim: rgb(233 238 246 / 0.7);
+    --hero-faint: rgb(233 238 246 / 0.5);
+    --hero-track: rgb(255 255 255 / 0.1);
+    --hero-chip-line: rgb(255 255 255 / 0.14);
+    --hero-chip-bg: rgb(255 255 255 / 0.04);
+    --hero-shadow: 0 14px 30px -16px rgb(0 0 0 / 0.55);
+    --tone-cool: #5b86ff;
+    --tone-warm: #f5b13d;
+    --tone-hot: #ff6150;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --bar-bg: rgb(11 15 22 / 0.86);
+    --tile-base: var(--surface);
+    --tile-ink: #fff;
+    --selected-bg: var(--text);
+    --selected-text: var(--bg);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: linear-gradient(var(--bg-top), var(--bg) 320px) no-repeat, var(--bg);
+    color: var(--text);
+    font: 15px/1.45 var(--sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  main { max-width: 560px; margin: 0 auto; padding: 18px 16px calc(var(--tabbar) + 32px); }
+  /* Views slide in from the side they come from; the first load rises card by card. */
+  .view { animation: enter 280ms var(--ease); }
+  .view[data-dir="next"] { animation-name: enter-next; }
+  .view[data-dir="prev"] { animation-name: enter-prev; }
+  .view[data-dir="still"] { animation: none; }
+  @keyframes enter { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes enter-next { from { opacity: 0; transform: translateX(24px); } }
+  @keyframes enter-prev { from { opacity: 0; transform: translateX(-24px); } }
+  .view[data-dir="up"] > :is(.hero, .card, .group, h2) { animation: rise 460ms var(--ease) both; }
+  .view[data-dir="up"] > :nth-child(3) { animation-delay: 40ms; }
+  .view[data-dir="up"] > :nth-child(4) { animation-delay: 80ms; }
+  .view[data-dir="up"] > :nth-child(5) { animation-delay: 120ms; }
+  .view[data-dir="up"] > :nth-child(6) { animation-delay: 160ms; }
+  .view[data-dir="up"] > :nth-child(7) { animation-delay: 200ms; }
+  .view[data-dir="up"] > :nth-child(n + 8) { animation-delay: 240ms; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+
+  /* Small uppercase labels in the mono face: card titles, axis-like meta. */
+  .eyebrow { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); }
+  header.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin: 4px 2px 14px; }
+  header.top h1 { font-size: 26px; font-weight: 650; line-height: 1.1; margin: 4px 0 0; letter-spacing: -0.025em; }
+  header.top .date { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); margin-bottom: 4px; }
+  header.top .hello { white-space: nowrap; font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); }
+  h2 { display: flex; align-items: center; gap: 10px; margin: 26px 2px 10px; font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-2); }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); order: 1; }
+  h2 .more { order: 2; font: 600 11px/1 var(--mono); letter-spacing: 0.07em; color: var(--series-1); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .muted { color: var(--text-2); }
+  .faint { color: var(--text-3); }
+  .small { font-size: 13px; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pos { color: var(--positive); }
+  /* Amounts in lists and meta lines use the mono face so columns line up. */
+  :is(.tx, .rows, .bar-head, .day-head, .result-line, .goal-ends) .num { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: -0.01em; }
+
+  /* Hero: an instrument panel on a faint grid, its accent following the month's pace. */
+  .hero { --tone: var(--tone-cool); position: relative; isolation: isolate; overflow: hidden; color: var(--hero-text); border-radius: 14px; padding: 18px 18px 14px; border: 1px solid var(--hero-border);
+    background: linear-gradient(var(--hero-grid) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, var(--hero-grid) 1px, transparent 1px) 0 0 / 22px 22px, var(--hero-bg);
+    box-shadow: var(--hero-shadow); }
+  .hero.warm { --tone: var(--tone-warm); }
+  .hero.hot { --tone: var(--tone-hot); }
+  /* A soft glow of the accent drifting slowly behind the numbers. */
+  .hero::before { content: ""; position: absolute; z-index: -1; width: 80%; height: 150%; right: -30%; top: -70%; background: radial-gradient(closest-side, color-mix(in srgb, var(--tone) var(--hero-glow), transparent), transparent); animation: drift 18s ease-in-out infinite alternate; pointer-events: none; }
+  @keyframes drift { to { transform: translate(-70%, 35%); } }
+  .hero .top-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .mood { display: inline-flex; align-items: center; gap: 7px; font: 500 10.5px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--hero-chip-line); background: var(--hero-chip-bg); white-space: nowrap; }
+  .mood::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent); }
+  .hero .label { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--hero-dim); }
+  .hero .big { cursor: pointer; user-select: none; -webkit-user-select: none; font-size: 58px; font-weight: 650; letter-spacing: -0.045em; line-height: 1; margin: 14px 0 8px; color: var(--hero-strong); }
+  .hero .big small { font-size: 20px; font-weight: 500; color: var(--tone); margin-left: 6px; letter-spacing: 0; }
+  .hero .sub { font: 400 12px/1.4 var(--mono); color: var(--hero-dim); }
+  .period { margin: 18px 0 2px; }
+  .period .track { position: relative; height: 4px; border-radius: 2px; background: var(--hero-track); overflow: hidden; }
+  .period .fill { height: 100%; background: var(--tone); transform-origin: left; transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .period .ends { display: flex; justify-content: space-between; font: 400 10.5px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--hero-faint); margin-top: 8px; }
+  .minis { display: grid; grid-template-columns: repeat(3, 1fr); margin: 16px -18px 0; border-top: 1px solid var(--hero-line); }
+  .mini { padding: 11px 18px 0; min-width: 0; }
+  .mini + .mini { border-left: 1px solid var(--hero-line); }
+  .mini .k { font: 500 10px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--hero-faint); }
+  .mini .v { font: 500 14px/1.3 var(--mono); margin-top: 4px; color: var(--hero-strong); }
+  .toggle { display: flex; align-items: center; gap: 6px; margin: 12px -18px -14px; padding: 11px 18px; width: calc(100% + 36px); border-top: 1px solid var(--hero-line); font: 500 10.5px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--hero-dim); }
+  .toggle svg { margin-left: auto; transition: transform 200ms; }
+  .toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .details { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .details.open { grid-template-rows: 1fr; }
+  .details > div { overflow: hidden; }
+  .details .rows { margin-top: 16px; }
+  .hero .rows li { border-color: var(--hero-line); font-size: 14px; }
+  .hero .rows .sub-date { color: var(--hero-faint); font: 400 11px var(--mono); }
+
+  .rows { list-style: none; margin: 0; padding: 0; }
+  .rows li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .rows li:first-child { border-top: 0; }
+  .rows li.total { font-weight: 600; }
+  .rows .label { min-width: 0; overflow-wrap: anywhere; }
+
+  .banner { display: flex; gap: 12px; align-items: center; border-radius: 10px; padding: 11px 13px; margin-bottom: 10px; background: var(--warning-bg); border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent); }
+  .banner.critical { background: var(--negative-bg); border-color: color-mix(in srgb, var(--critical) 40%, transparent); }
+  .banner .sign { width: 24px; height: 24px; border-radius: 6px; background: var(--warning); color: #3a2800; display: grid; place-items: center; font: 700 13px var(--mono); flex: none; }
+  .banner.critical .sign { background: var(--critical); color: #fff; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgb(217 58 47 / 0.2); } }
+  .banner b { display: block; font-size: 14px; font-weight: 600; }
+  .status { display: inline-flex; align-items: center; gap: 7px; font: 500 10.5px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 9px; border-radius: 6px; border: 1px solid currentColor; white-space: nowrap; margin-bottom: 2px; }
+  .theme { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); }
+  .right { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status.ok { color: var(--positive); background: var(--positive-bg); border-color: color-mix(in srgb, var(--positive) 25%, transparent); }
+  .status.warning { color: var(--warning-text); background: var(--warning-bg); border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
+  .status.critical { color: var(--negative); background: var(--negative-bg); border-color: color-mix(in srgb, var(--negative) 30%, transparent); }
+
+  .pill { display: inline-flex; align-items: center; gap: 4px; font: 500 12px/1.2 var(--mono); padding: 4px 8px; border-radius: 6px; }
+  .pill .rest { font-family: var(--sans); font-weight: 400; color: var(--text-2); }
+  .pill.good { background: var(--positive-bg); color: var(--positive); }
+  .pill.bad { background: var(--negative-bg); color: var(--negative); }
+  .pill.warn { background: var(--warning-bg); color: var(--warning-text); }
+  .figure { font-size: 30px; font-weight: 650; letter-spacing: -0.035em; line-height: 1.1; margin: 8px 0 10px; }
+
+  /* Charts */
+  .legend { display: flex; gap: 14px; font: 400 11px/1.3 var(--mono); color: var(--text-2); margin: 14px 0 6px; }
+  .key { display: inline-block; width: 8px; height: 8px; border-radius: 2px; vertical-align: 0; margin-right: 6px; }
+  .key.line { width: 12px; height: 2px; border-radius: 1px; vertical-align: 3px; }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .chart text { font: 400 10px var(--mono); fill: var(--text-3); }
+  .chart .value { fill: var(--text); font-weight: 600; }
+  .draw { transition: stroke-dashoffset 900ms cubic-bezier(0.3, 0.7, 0.2, 1); }
+  .grow-y { transform-box: fill-box; transform-origin: bottom; transition: transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .tip { position: absolute; pointer-events: none; background: var(--ink); color: #e9eef6; font: 400 11px/1.5 var(--mono); padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); box-shadow: 0 6px 16px rgb(11 18 32 / 0.25); }
+  :root[data-theme="dark"] .tip { border: 1px solid var(--line-strong); }
+  .tip b { color: #fff; font-weight: 600; }
+  .tip[hidden] { display: none; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); margin: 0 0 10px; }
+  .stat { padding: 12px 14px; min-width: 0; }
+  .stat + .stat { border-left: 1px solid var(--line); }
+  .stat .v { font: 500 16px/1.3 var(--mono); letter-spacing: -0.02em; margin-top: 4px; }
+
+  .split { display: flex; height: 8px; gap: 2px; margin: 12px 0 8px; }
+  .split div { border-radius: 1px; transform-origin: left; transition: transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .split div:first-child { border-radius: 3px 1px 1px 3px; }
+  .split div:last-child { border-radius: 1px 3px 3px 1px; }
+
+  .bar-row { display: block; width: 100%; text-align: left; padding: 11px 0; border-top: 1px solid var(--line); }
+  .bar-row:first-of-type { border-top: 0; }
+  .bar-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; font-weight: 500; }
+  .bar { height: 4px; background: var(--hue, var(--series-1)); border-radius: 0 2px 2px 0; min-width: 3px; transform-origin: left; transition: transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .count { font: 400 11px var(--mono); color: var(--text-3); margin-left: 6px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 8px; vertical-align: 1px; background: var(--hue, var(--text-3)); }
+  .week-tiles { display: grid; grid-template-columns: 1fr 1fr; margin: 14px -16px -16px; border-top: 1px solid var(--line); }
+  .tile { padding: 11px 16px 13px; min-width: 0; }
+  .tile + .tile { border-left: 1px solid var(--line); }
+  .tile .v { font-weight: 600; font-size: 14px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .key.dash { width: 12px; height: 0; border-top: 1.5px dashed var(--text-3); border-radius: 0; vertical-align: 3px; }
+  .trend { display: inline-flex; align-items: center; gap: 10px; }
+  .trend svg { display: block; }
+  /* Savings jar: the fill rises to the share saved, coins drop in when a new transfer shows up. */
+  .saving { display: flex; gap: 16px; align-items: center; }
+  .saving .text { flex: 1; min-width: 0; }
+  .jar { flex: none; overflow: visible; }
+  .jar .level { transform-box: fill-box; transform-origin: bottom; transition: transform 1200ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms; }
+  .jar .coin { transform-box: fill-box; animation: coin 900ms cubic-bezier(0.5, 0, 0.8, 0.6) both; }
+  @keyframes coin { from { transform: translateY(-46px); opacity: 0; } 25% { opacity: 1; } 85% { opacity: 1; } to { transform: translateY(34px); opacity: 0; } }
+  .goal-track { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); margin: 16px 0 8px; }
+  .goal-track .fill { height: 100%; border-radius: 3px; transform-origin: left; transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .goal-track .now { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); }
+  .goal-ends { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-3); }
+  .goal-ends b { font: 600 12px var(--mono); }
+  .challenge-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin-top: 8px; }
+  .medals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .medal { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 8px; border-radius: 5px; border: 1px solid var(--line); color: var(--text-3); }
+  .medal.won { background: var(--positive-bg); border-color: color-mix(in srgb, var(--positive) 25%, transparent); color: var(--positive); }
+  .collapsed { transform: scaleX(0); }
+  .collapsed-y { transform: scaleY(0); }
+
+  /* Transactions: a monogram tile in the category's colour. */
+  .tx { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 0; border-top: 1px solid var(--line); }
+  .tx:first-child { border-top: 0; }
+  .icon { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; flex: none; font: 600 11.5px/1 var(--mono); letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--hue, var(--text-3)) 85%, var(--tile-ink)); background: color-mix(in srgb, var(--hue, var(--text-3)) 12%, var(--tile-base)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue, var(--text-3)) 22%, transparent); }
+  .tx .body { flex: 1; min-width: 0; }
+  .tx .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; font-size: 14.5px; }
+  .tx .cat { font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx .cat .dot { width: 6px; height: 6px; margin-right: 6px; }
+  .tx.transfer { opacity: 0.5; }
+  button.tx { font: inherit; color: inherit; }
+  .day-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; padding: 14px 2px 7px; font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); background: var(--bg); }
+  .day-head .num { font-size: 11px; }
+  .group { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 14px; box-shadow: var(--shadow); }
+
+  .search { position: relative; display: block; margin-bottom: 10px; }
+  .search input { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); padding: 0 14px 0 38px; font: inherit; color: var(--text); outline: none; -webkit-appearance: none; transition: border-color 150ms, box-shadow 150ms; }
+  .search input::placeholder { color: var(--text-3); }
+  .search input:focus { border-color: var(--series-1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-1) 18%, transparent); }
+  .search svg { position: absolute; left: 12px; top: 12px; color: var(--text-3); }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 10px; margin: 0 -16px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; display: inline-flex; align-items: center; height: 30px; padding: 0 11px; border-radius: 7px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; font-weight: 500; color: var(--text-2); white-space: nowrap; transition: background 150ms, color 150ms, border-color 150ms; }
+  .chip .dot { width: 6px; height: 6px; margin-right: 7px; vertical-align: 0; }
+  .chip[aria-pressed="true"] { background: var(--selected-bg); border-color: var(--selected-bg); color: var(--selected-text); }
+  .result-line { display: flex; justify-content: space-between; font: 400 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin: 4px 2px 0; }
+  .result-line .num { font-size: 11px; }
+
+  /* Tab bar: a hairline on top and an accent bar over the open tab. */
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center; background: var(--bar-bg); -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  .tabbar .inner { display: flex; width: 100%; max-width: 560px; }
+  .tabbar button { position: relative; flex: 1; height: var(--tabbar); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 500 10px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); transition: color 150ms; }
+  .tabbar button::before { content: ""; position: absolute; top: -1px; left: 50%; width: 28px; height: 2px; margin-left: -14px; border-radius: 0 0 2px 2px; background: var(--series-1); transform: scaleX(0); transition: transform 260ms var(--ease); }
+  .tabbar button[aria-current="page"] { color: var(--text); }
+  .tabbar button[aria-current="page"]::before { transform: scaleX(1); }
+  .tabbar button[aria-current="page"] svg { color: var(--series-1); animation: pop 420ms var(--spring); }
+  @keyframes pop { 40% { transform: translateY(-2px) scale(1.12); } }
+
+  /* Quick squeeze on press, springy release. */
+  .press { transition: transform 420ms var(--spring), opacity 200ms; }
+  .press:active { transform: scale(0.97); opacity: 0.85; transition-duration: 90ms; }
+
+  .ptr { position: fixed; z-index: 30; top: 0; left: 50%; width: 36px; height: 36px; margin-left: -18px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 14px rgb(11 18 32 / 0.12); display: grid; place-items: center; color: var(--series-1); transform: translateY(-50px); opacity: 0; pointer-events: none; }
+  .ptr.back { transition: transform 300ms var(--ease), opacity 300ms; }
+  .ptr.spin svg { animation: spin 800ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; z-index: 30; left: 50%; bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + 14px); transform: translate(-50%, 12px); opacity: 0; background: var(--ink); color: #fff; font: 500 12px/1.2 var(--mono); padding: 10px 14px; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.08); box-shadow: 0 10px 24px rgb(11 18 32 / 0.28); transition: transform 300ms var(--spring), opacity 200ms; pointer-events: none; white-space: nowrap; }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; }
+  .confetti { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+  footer { text-align: center; color: var(--text-3); font: 400 11px/1.6 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 28px; }
+  footer button { color: var(--series-1); padding: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+  .empty { text-align: center; color: var(--text-3); padding: 32px 0; font: 400 12px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* Category picker: a bottom sheet over a dimmed page. */
+  .scrim { position: fixed; inset: 0; z-index: 20; background: rgb(7 9 13 / 0.45); animation: fade 200ms both; }
+  :root[data-theme="dark"] .scrim { background: rgb(0 0 0 / 0.6); }
+  .scrim.closing { animation: fade-out 180ms both; pointer-events: none; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes fade-out { to { opacity: 0; } }
+  .sheet { position: fixed; z-index: 21; left: 0; right: 0; bottom: 0; max-width: 560px; max-height: 86vh; margin: 0 auto; overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 32px rgb(11 18 32 / 0.18); animation: sheet-up 320ms var(--ease) both; }
+  .sheet.closing { animation: sheet-down 200ms ease-in both; pointer-events: none; }
+  @keyframes sheet-up { from { transform: translateY(100%); } }
+  @keyframes sheet-down { to { transform: translateY(100%); } }
+  .sheet .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 14px; }
+  .sheet .who { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .sheet .who .name { font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
+  .sheet .who .meta { font: 400 12px/1.4 var(--mono); color: var(--text-3); }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); font-size: 14px; margin-bottom: 14px; cursor: pointer; }
+  .switch input { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 40px; height: 24px; margin: 0; border-radius: 12px; background: var(--line-strong); transition: background 180ms; cursor: pointer; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); transition: transform 220ms var(--spring); }
+  .switch input:checked { background: var(--series-1); }
+  .switch input:checked::after { transform: translateX(16px); }
+  .switch input:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+  .picks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .pick { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 500; text-align: left; }
+  .pick .dot { flex: none; }
+  .pick[aria-pressed="true"] { background: var(--selected-bg); border-color: var(--selected-bg); color: var(--selected-text); }
+  .sheet.busy .picks, .sheet.busy .reset { opacity: 0.5; pointer-events: none; }
+  .sheet .reset { display: block; width: 100%; margin-top: 12px; padding: 12px; font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--series-1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="ptr" id="ptr" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg></div>
+<div class="toast" id="toast" role="status"></div>
+<main id="main"></main>
+<nav class="tabbar" aria-label="Näkymät"><div class="inner" id="tabs"></div></nav>
+<script>
+let DATA = <?!= data ?>;
+const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// --- Finnish texts and formatting ---
+
+// The sheet keeps English category names (they are what rules and merchant choices store); the page shows Finnish.
+const CATEGORY_FI = {
+  Groceries: "Ruokakauppa",
+  "Bars & eating out": "Ravintolat ja baarit",
+  Transport: "Liikenne",
+  Housing: "Asuminen",
+  Bills: "Laskut",
+  Loans: "Lainat",
+  Subscriptions: "Tilaukset",
+  Shopping: "Ostokset",
+  Health: "Terveys",
+  Entertainment: "Viihde",
+  Gambling: "Rahapelit",
+  Travel: "Matkailu",
+  Income: "Tulot",
+  Savings: "Säästöt",
+  Transfers: "Siirrot",
+  Other: "Muut",
+  Uncategorized: "Luokittelematta",
+};
+const KIND_FI = { income: "Tulo", subscription: "Tilaus", bill: "Lasku" };
+const catName = (name) => CATEGORY_FI[name || "Uncategorized"] || name;
+// One colour per category for dots, bars and transaction tiles.
+const CATEGORY_HUE = {
+  Groceries: "#3f9a3a",
+  "Bars & eating out": "#f0702e",
+  Transport: "#1f95d6",
+  Housing: "#6b5bd6",
+  Bills: "#c2850c",
+  Loans: "#8a5a44",
+  Subscriptions: "#d6457a",
+  Shopping: "#a64bd1",
+  Health: "#0ea5b7",
+  Entertainment: "#d9a400",
+  Gambling: "#cc3a2f",
+  Travel: "#2f5bea",
+  Income: "#0b8452",
+  Savings: "#10a374",
+  Transfers: "#7b8491",
+  Other: "#7b8491",
+};
+// Categories added in the Categories sheet get a stable colour from their name.
+const EXTRA_HUES = ["#b4532a", "#3a7d8c", "#8a7a12", "#9c4f96", "#4f8a3a", "#5a62b8", "#c0577a", "#2f8f7f"];
+const catHue = (name) => CATEGORY_HUE[name] || (name && name !== "Uncategorized" ? EXTRA_HUES[[...name].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) >>> 0, 0) % EXTRA_HUES.length] : "#9aa2ad");
+const dot = (name) => h("span", { class: "dot", style: { "--hue": catHue(name) }, "aria-hidden": "true" });
+// "K-Market" → KM, "Zalando" → ZA.
+function monogram(merchant) {
+  const words = String(merchant || "?").toUpperCase().match(/[\p{L}\p{N}]+/gu) || ["?"];
+  return words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2);
+}
+
+const money = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR" });
+const money0 = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const eur = (c) => money.format(c / 100);
+const eur0 = (c) => money0.format(Math.round(c / 100));
+const signed = (c) => (c > 0 ? `+${eur(c)}` : eur(c));
+const dt = (iso) => new Date(`${iso}T12:00:00`);
+const weekday = new Intl.DateTimeFormat("fi-FI", { weekday: "short" });
+const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const dayMonth = (iso) => `${Number(iso.slice(8))}.${Number(iso.slice(5, 7))}.`;
+const shortDate = (iso) => `${weekday.format(dt(iso))} ${dayMonth(iso)}`;
+const longDate = (iso) => new Intl.DateTimeFormat("fi-FI", { weekday: "long", day: "numeric", month: "numeric" }).format(dt(iso));
+const monthLong = (ym) => capital(new Intl.DateTimeFormat("fi-FI", { month: "long" }).format(dt(`${ym}-15`)));
+const monthShort = (ym) => capital(new Intl.DateTimeFormat("fi-FI", { month: "short" }).format(dt(`${ym}-15`)).replace(".", ""));
+// "syyskuussa": a month name in the inessive case (every Finnish month name ends in -kuu).
+const monthIn = (ym) => new Intl.DateTimeFormat("fi-FI", { month: "long" }).format(dt(`${ym}-15`)) + "ssa";
+// Short chart labels: 850, 1,8k, 12k.
+function compact(cents) {
+  const e = cents / 100;
+  if (Math.abs(e) >= 10000) return `${Math.round(e / 1000)}k`;
+  if (Math.abs(e) >= 1000) return `${(e / 1000).toFixed(1).replace(/\.0$/, "").replace(".", ",")}k`;
+  return String(Math.round(e));
+}
+const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+const addDays = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+const shiftMonth = (ym, n) => {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
+};
+
+// --- DOM helpers: text only (bank data never goes through innerHTML) ---
+
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else if (k === "style") for (const [p, pv] of Object.entries(v)) p.startsWith("--") ? el.style.setProperty(p, pv) : (el.style[p] = pv);
+    else if (k === "value") el.value = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+function s(tag, attrs, ...children) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  for (const c of children.flat(Infinity)) if (c != null) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+const ICONS = {
+  home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
+  list: "M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01",
+  months: "M4 20V11M10 20V5M16 20v-6M21 20H3",
+  search: "M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14zM21 21l-4.3-4.3",
+  chevron: "M6 9l6 6 6-6",
+  sun: "M12 3v1.5M12 19.5V21M4.6 4.6l1.1 1.1M18.3 18.3l1.1 1.1M3 12h1.5M19.5 12H21M4.6 19.4l1.1-1.1M18.3 5.7l1.1-1.1M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z",
+  moon: "M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.5 6.5 0 0 0 10 10z",
+};
+const icon = (name, size = 24) =>
+  s("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" }, s("path", { d: ICONS[name] }));
+
+// Runs once the node is laid out (for measuring widths and starting transitions).
+const afterPaint = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
+
+// Last value shown per number, so a refresh ticks from the old value to the new one instead of from zero.
+const shown = {};
+function countUp(el, cents, format, key) {
+  const from = key in shown ? shown[key] : 0;
+  shown[key] = cents;
+  if (REDUCED_MOTION || from === cents) return void (el.textContent = format(cents));
+  const start = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - start) / 800);
+    el.textContent = format(from + (cents - from) * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+// A number that counts to its value once laid out.
+function ticker(cents, format, key) {
+  const el = h("span", {}, format(REDUCED_MOTION ? cents : key in shown ? shown[key] : 0));
+  afterPaint(() => countUp(el, cents, format, key));
+  return el;
+}
+
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+// A short burst of confetti from a point on the screen.
+function confetti(x, y) {
+  if (REDUCED_MOTION) return;
+  const canvas = h("canvas", { class: "confetti" });
+  document.body.append(canvas);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = innerWidth * dpr;
+  canvas.height = innerHeight * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const colors = ["#2f5bea", "#10a374", "#f0a416", "#d6457a", "#5b86ff", "#f0702e"];
+  const bits = Array.from({ length: 90 }, (_, i) => {
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+    const speed = 6 + Math.random() * 8;
+    return { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: Math.random() * 6, spin: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 5, h: 3 + Math.random() * 4, color: colors[i % colors.length] };
+  });
+  const start = performance.now();
+  const frame = (t) => {
+    const age = (t - start) / 1800;
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    for (const b of bits) {
+      b.vy += 0.32;
+      b.vx *= 0.985;
+      b.x += b.vx;
+      b.y += b.vy;
+      b.r += b.spin;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - age * age);
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.r);
+      ctx.fillStyle = b.color;
+      ctx.fillRect(-b.w / 2, -b.h / 2, b.w, Math.abs(Math.cos(b.r * 2)) * b.h + 1);
+      ctx.restore();
+    }
+    if (age < 1) requestAnimationFrame(frame);
+    else canvas.remove();
+  };
+  requestAnimationFrame(frame);
+}
+
+// Rounds an axis maximum up to 1, 2 or 5 × 10^n and returns the tick step.
+function niceScale(max, ticks = 3) {
+  const raw = Math.max(max, 1) / ticks;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 5, 10].map((m) => m * pow).find((v) => v >= raw);
+  return { step, max: step * ticks };
+}
+
+// --- App state and navigation ---
+
+const state = { tab: "home", q: "", category: "", month: "", monthIndex: 0, scroll: {} };
+const TABS = [
+  ["home", "Koti", "home"],
+  ["transactions", "Tapahtumat", "list"],
+  ["months", "Kuukaudet", "months"],
+];
+
+// Each tab's view is built once and kept, so switching back is instant and charts don't redraw.
+let views = {};
+const tabIndex = (tab) => TABS.findIndex((t) => t[0] === tab);
+
+function go(tab, filters) {
+  // Tapping the open tab scrolls it back to the top.
+  if (tab === state.tab && !filters) return window.scrollTo({ top: 0, behavior: REDUCED_MOTION ? "auto" : "smooth" });
+  state.scroll[state.tab] = window.scrollY;
+  if (filters) {
+    Object.assign(state, filters);
+    delete views.transactions;
+  }
+  const dir = tabIndex(tab) > tabIndex(state.tab) ? "next" : "prev";
+  state.tab = tab;
+  render(dir);
+  window.scrollTo(0, filters ? 0 : state.scroll[tab] || 0);
+}
+
+function render(dir) {
+  document.getElementById("tabs").replaceChildren(
+    ...TABS.map(([id, label, ic]) => h("button", { class: "press", "aria-current": state.tab === id ? "page" : null, onclick: () => go(id) }, icon(ic), label)),
+  );
+  const build = { transactions: transactionsView, months: monthsView, home: homeView }[state.tab];
+  const view = views[state.tab] || (views[state.tab] = build());
+  view.dataset.dir = dir || "up";
+  document.getElementById("main").replaceChildren(view);
+}
+
+// Fetches fresh numbers from the sheet without reloading the page (the bank itself syncs every 4 hours).
+let refreshing = false;
+function refresh() {
+  if (refreshing) return;
+  const run = window.google && google.script && google.script.run;
+  if (!run) return location.reload();
+  refreshing = true;
+  pullIndicator(70, true);
+  const done = (text) => {
+    refreshing = false;
+    pullIndicator(0);
+    toast(text);
+  };
+  run
+    .withSuccessHandler((json) => {
+      DATA = JSON.parse(json);
+      views = {};
+      render("still");
+      done(DATA.lastSync ? `Ajan tasalla · synkattu ${DATA.lastSync.time}` : "Ajan tasalla");
+    })
+    .withFailureHandler(() => done("Päivitys epäonnistui"))
+    .dashboardData();
+}
+
+function pullIndicator(offset, spinning) {
+  const el = document.getElementById("ptr");
+  el.classList.toggle("back", !offset || spinning);
+  el.classList.toggle("spin", Boolean(spinning));
+  el.style.transform = `translateY(${Math.min(offset, 80) - 50}px)`;
+  el.style.opacity = String(Math.min(1, offset / 60));
+  el.firstChild.style.transform = spinning ? "" : `rotate(${offset * 3}deg)`;
+}
+
+// Pull down at the top of the page to refresh. Charts and swipe areas keep their own gestures.
+let pull = null;
+document.addEventListener("touchstart", (e) => {
+  if (window.scrollY <= 0 && !refreshing && !e.target.closest(".chart, .chips, .sheet, .scrim")) pull = { y: e.touches[0].clientY, x: e.touches[0].clientX, d: 0 };
+}, { passive: true });
+document.addEventListener("touchmove", (e) => {
+  if (!pull) return;
+  const dy = e.touches[0].clientY - pull.y;
+  if (Math.abs(e.touches[0].clientX - pull.x) > Math.abs(dy) || window.scrollY > 0) return void (pull.d = 0, pullIndicator(0));
+  pull.d = Math.max(0, dy * 0.55);
+  pullIndicator(pull.d);
+}, { passive: true });
+document.addEventListener("touchend", () => {
+  if (!pull) return;
+  if (pull.d >= 70) refresh();
+  else pullIndicator(0);
+  pull = null;
+});
+
+// --- Koti ---
+
+function homeView() {
+  const d = DATA;
+  return h(
+    "div",
+    { class: "view" },
+    h("header", { class: "top" }, h("div", {}, h("div", { class: "hello" }, `${shortDate(d.today)} · ${greeting()}`), h("h1", {}, "Talous")), h("div", { class: "right" }, consentStatus(d), themeButton())),
+    banners(d),
+    heroCard(d),
+    h("h2", {}, "Säästöt"),
+    savingsCard(d),
+    h("h2", {}, "Tämä viikko"),
+    weekCard(d),
+    h("h2", {}, "Tämä kuukausi"),
+    challengeCard(d),
+    paceCard(d),
+    recurringCard(d),
+    d.transactions.length
+      ? [
+          h("h2", {}, "Viimeisimmät", h("button", { class: "more press", onclick: () => go("transactions", { q: "", category: "", month: "" }) }, "Kaikki")),
+          h("div", { class: "group" }, d.transactions.slice(0, 5).map(txRow)),
+        ]
+      : null,
+    footer(d),
+  );
+}
+
+// Switches between light and dark and remembers the choice; charts follow through CSS variables, so nothing is redrawn.
+function themeButton() {
+  const dark = () => document.documentElement.dataset.theme === "dark";
+  const btn = h("button", { class: "theme press", "aria-label": "Vaihda teema" });
+  const paint = () => btn.replaceChildren(icon(dark() ? "sun" : "moon", 16));
+  btn.addEventListener("click", () => {
+    const next = dark() ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem("theme", next);
+    } catch (e) {}
+    paint();
+  });
+  paint();
+  return btn;
+}
+
+function greeting() {
+  const hour = new Date().getHours();
+  return hour < 5 ? "Hyvää yötä" : hour < 10 ? "Huomenta" : hour < 17 ? "Hyvää päivää" : hour < 22 ? "Hyvää iltaa" : "Hyvää yötä";
+}
+
+// How this month is going compared with last month by the same day.
+function mood(d) {
+  const ratio = d.spentLastMonthToDate > 0 ? d.spentThisMonth / d.spentLastMonthToDate : 1;
+  if (d.safeToSpend <= 0) return { tone: "hot", text: "Budjetti tiukalla" };
+  if (ratio <= 1) return { tone: "", text: "Hyvä tahti", good: d.spentThisMonth > 0 };
+  if (ratio <= 1.25) return { tone: "warm", text: "Tahti kiihtyy" };
+  return { tone: "hot", text: "Kova vauhti" };
+}
+
+// Confetti once a day when the month is going well.
+function celebrate(d, el) {
+  if (!mood(d).good) return;
+  try {
+    if (localStorage.getItem("celebrated") === d.today) return;
+    localStorage.setItem("celebrated", d.today);
+  } catch (e) {
+    return;
+  }
+  setTimeout(() => {
+    const r = el.getBoundingClientRect();
+    if (r.width) confetti(r.left + r.width / 2, r.top + 40);
+  }, 700);
+}
+
+function banners(d) {
+  const list = [];
+  const add = (level, title, text) => list.push(h("div", { class: `banner ${level}`, role: "status" }, h("span", { class: "sign", "aria-hidden": "true" }, "!"), h("div", {}, h("b", {}, title), h("span", { class: "small muted" }, text))));
+  if (d.consentDaysLeft == null) add("critical", "Pankkiyhteys puuttuu", "Yhdistä pankki taulukosta: Finance → Reconnect bank.");
+  else if (d.consentDaysLeft <= 14) add(d.consentDaysLeft <= 3 ? "critical" : "warning", d.consentDaysLeft <= 0 ? "Pankkiyhteys on päättynyt" : `Pankkiyhteys päättyy ${d.consentDaysLeft} päivän päästä`, "Uusi se tietokoneella taulukosta: Finance → Reconnect bank.");
+  if (d.lastSync && d.lastSync.status !== "ok") add("critical", "Viimeisin päivitys epäonnistui", d.lastSync.message);
+  if (d.uncategorized) add("warning", `${d.uncategorized} luokittelematonta tapahtumaa`, "Valitse kategoria taulukon Merchants-välilehdellä.");
+  return list;
+}
+
+// Always-visible bank access countdown under the title; it turns yellow 30 days and red 3 days before the end.
+function consentStatus(d) {
+  if (d.consentDaysLeft == null) return null;
+  const days = d.consentDaysLeft;
+  const level = days <= 3 ? "critical" : days <= 30 ? "warning" : "ok";
+  return h("span", { class: `status ${level}`, title: "Pankkiyhteys" }, days <= 0 ? "Pankki · päättynyt" : `Pankki · ${days} pv`);
+}
+
+function heroCard(d) {
+  const bills = -d.upcoming.reduce((a, u) => a + u.amount, 0);
+  const periodDays = Math.max(1, daysBetween(d.periodStart, d.payday));
+  const elapsed = Math.min(1, Math.max(0, daysBetween(d.periodStart, d.today) / periodDays));
+  const perDay = (c) => String(Math.round(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const big = ticker(d.safeToSpendPerDay, perDay, "perDay");
+  const m = mood(d);
+  const fill = h("div", { class: "fill collapsed" });
+  const details = h(
+    "div",
+    { class: "details" },
+    h(
+      "div",
+      {},
+      h(
+        "ul",
+        { class: "rows" },
+        h("li", {}, h("span", {}, "Tilillä käytettävissä"), h("span", { class: "num" }, eur(d.cash))),
+        h("li", {}, h("span", {}, "Luottokorttivelka"), h("span", { class: "num" }, d.cardOwed ? `−${eur(d.cardOwed)}` : eur(0))),
+        d.upcoming.map((u) => h("li", {}, h("span", { class: "label" }, u.merchant, " ", h("span", { class: "sub-date" }, shortDate(u.date))), h("span", { class: "num" }, `−${eur(-u.amount)}`))),
+        h("li", { class: "total" }, h("span", {}, "Jää palkkapäivään asti"), h("span", { class: "num" }, eur(d.safeToSpend))),
+      ),
+    ),
+  );
+  const toggle = h(
+    "button",
+    {
+      class: "toggle press",
+      "aria-expanded": "false",
+      onclick: () => {
+        const open = !details.classList.contains("open");
+        details.classList.toggle("open", open);
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.firstChild.textContent = open ? "Piilota erittely" : "Näytä erittely";
+      },
+    },
+    "Näytä erittely",
+    icon("chevron", 16),
+  );
+  afterPaint(() => {
+    fill.style.transform = `scaleX(${elapsed})`;
+    fill.classList.remove("collapsed");
+  });
+  const hero = h(
+    "section",
+    { class: `hero ${m.tone}` },
+    h("div", { class: "top-row" }, h("div", { class: "label" }, "Voit käyttää päivässä"), h("span", { class: "mood" }, m.text)),
+    h("div", { class: "big num", onclick: (e) => confetti(e.clientX, e.clientY) }, big, h("small", {}, "€")),
+    h("div", { class: "sub" }, `${eur0(d.safeToSpend)} palkkapäivään asti · ${d.daysLeft} pv`),
+    h(
+      "div",
+      { class: "period", role: "img", "aria-label": `Palkkajaksosta kulunut ${Math.round(elapsed * 100)} %` },
+      h("div", { class: "track" }, fill),
+      h("div", { class: "ends" }, h("span", {}, `Palkka ${dayMonth(d.periodStart)}`), h("span", {}, `Seuraava ${shortDate(d.payday)}`)),
+    ),
+    h(
+      "div",
+      { class: "minis" },
+      mini("Tilillä", eur0(d.cash)),
+      mini("Luottokortti", d.cardOwed ? `−${eur0(d.cardOwed)}` : eur0(0)),
+      mini("Laskut", bills ? `−${eur0(bills)}` : eur0(0)),
+    ),
+    toggle,
+    details,
+  );
+  celebrate(d, hero);
+  return hero;
+}
+
+// Reads and writes a remembered number; null when storage is unavailable (then no rewards are shown).
+function remembered(key, value) {
+  try {
+    if (value != null) localStorage.setItem(key, String(value));
+    const v = localStorage.getItem(key);
+    return v == null ? 0 : Number(v);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Pay yourself first: what can go to savings now, and a jar that fills as this pay period's transfers show up.
+// With a goal set (Settings sheet) the jar measures the goal and the card says whether it's still in reach.
+function savingsCard(d) {
+  const sv = d.savings;
+  const saved = Math.max(0, sv.saved);
+  const goal = sv.goal || saved + sv.suggested;
+  const share = (c) => (goal > 0 ? Math.min(1, c / goal) : 0);
+  // Coins and confetti once for each new transfer: the page remembers what it last showed for this period.
+  const key = `saved:${d.periodStart}`;
+  const seen = remembered(key);
+  const isNew = seen != null && saved > seen;
+  if (seen != null && saved !== seen) remembered(key, saved);
+
+  const jar = savingsJar(share(isNew ? seen : saved), share(saved), isNew);
+  let figure, text;
+  if (sv.goal) {
+    figure = [
+      h("div", { class: "eyebrow" }, "Säästötavoite tällä palkkajaksolla"),
+      h("div", { class: "figure num" + (sv.goalStatus === "done" ? " pos" : "") }, ticker(saved, eur0, "saved"), h("span", { class: "small faint" }, ` / ${eur0(sv.goal)}`)),
+    ];
+    const usual = `yleensä ${eur0(sv.typicalDaily)}/pv`;
+    text = {
+      done: [
+        h("span", { class: "pill good" }, "✓ Tavoite saavutettu"),
+        sv.suggested >= 1000 ? h("div", { class: "small muted", style: { marginTop: "8px" } }, `Voit siirtää vielä ${eur0(sv.suggested)} lisää.`) : null,
+      ],
+      ok: [
+        h("span", { class: "pill good" }, "Ulottuvilla"),
+        h("div", { class: "small muted", style: { marginTop: "8px" } }, `Siirrä vielä ${eur0(sv.remaining)}. Sen jälkeen päivässä ${eur0(sv.perDayIfGoal)} (${usual}).`),
+      ],
+      tight: [
+        h("span", { class: "pill warn" }, "Tiukka"),
+        h("div", { class: "small muted", style: { marginTop: "8px" } }, `Vielä ${eur0(sv.remaining)}: onnistuu, jos käytät palkkapäivään asti enintään ${eur0(sv.perDayIfGoal)}/pv (${usual}).`),
+      ],
+      out: [
+        h("span", { class: "pill bad" }, "Ei enää ulottuvilla"),
+        h("div", { class: "small muted", style: { marginTop: "8px" } }, `Vielä puuttuu ${eur0(sv.remaining)}. Realistisesti tällä jaksolla noin ${eur0(sv.reachable)}.`),
+      ],
+    }[sv.goalStatus];
+  } else if (sv.suggested >= 1000) {
+    figure = [h("div", { class: "eyebrow" }, "Voit siirtää säästöön nyt"), h("div", { class: "figure num" }, ticker(sv.suggested, eur0, "suggested"))];
+    text = [
+      h("div", { class: "small muted" }, `Tämä jää yli, kun käytät palkkapäivään asti kuten viime viikkoina (${eur0(sv.typicalDaily)}/pv). Siirron jälkeen päivässä ${eur0(sv.perDayAfter)}.`),
+      saved > 0 ? h("span", { class: "pill good", style: { marginTop: "10px" } }, `✓ Jo säästetty ${eur0(saved)}`) : null,
+    ];
+  } else if (saved > 0) {
+    figure = [h("div", { class: "eyebrow" }, "Säästetty tällä palkkajaksolla"), h("div", { class: "figure num pos" }, ticker(saved, eur0, "saved"))];
+    text = h("span", { class: "pill good" }, "✓ Säästöt hoidettu");
+  } else {
+    figure = [h("div", { class: "eyebrow" }, "Voit siirtää säästöön nyt"), h("div", { class: "figure num" }, eur0(0))];
+    text = h("div", { class: "small muted" }, "Ei vielä ylimääräistä. Kun pysyt päiväbudjetissa, tähän alkaa kertyä säästettävää.");
+  }
+  const card = h(
+    "section",
+    { class: "card" },
+    h("div", { class: "saving" }, jar, h("div", { class: "text" }, figure, text)),
+    h(
+      "div",
+      { class: "small faint", style: { marginTop: "12px" } },
+      sv.goal
+        ? `Jakso päättyy ${shortDate(sv.periodEnd)}. Mukana Säästöt-kategorian siirrot, nostot vähentävät. Tavoitteen voi muuttaa taulukon Settings-välilehdellä.`
+        : "Siirto näkyy tässä, kun se on Säästöt-kategoriassa (esim. sijoitustili).",
+    ),
+  );
+  if (isNew) {
+    setTimeout(() => {
+      const r = jar.getBoundingClientRect();
+      if (r.width) confetti(r.left + r.width / 2, r.top + 10);
+      toast(sv.goal && saved >= sv.goal && seen < sv.goal ? "✓ Säästötavoite saavutettu" : `+${eur0(saved - seen)} säästöön`);
+    }, 1300);
+  }
+  return card;
+}
+
+// A jar filled to `to` (0–1), rising from `from`; three coins drop in when `coins` is set.
+function savingsJar(from, to, coins) {
+  const body = "M14,22 Q14,16 20,16 H52 Q58,16 58,22 V78 Q58,86 50,86 H22 Q14,86 14,78 Z";
+  const level = s("rect", { class: "level", x: 14, y: 16, width: 44, height: 70, fill: "var(--series-3)", style: `transform: scaleY(${REDUCED_MOTION ? to : from})` });
+  const svg = s(
+    "svg",
+    { class: "jar", width: 72, height: 90, viewBox: "0 0 72 90", role: "img", "aria-label": `Säästöpurkki ${Math.round(to * 100)} % täynnä` },
+    s("defs", {}, s("clipPath", { id: "jar-clip" }, s("path", { d: body }))),
+    s("rect", { x: 22, y: 6, width: 28, height: 8, rx: 3, fill: "var(--series-muted)" }),
+    s("path", { d: body, fill: "var(--surface-2)" }),
+    s("g", { "clip-path": "url(#jar-clip)" }, level),
+    s("path", { d: body, fill: "none", stroke: "var(--series-muted)", "stroke-width": 2 }),
+    s("path", { d: "M21,28 V60", stroke: "#fff", "stroke-width": 3, "stroke-linecap": "round", opacity: 0.6 }),
+  );
+  if (coins && !REDUCED_MOTION) {
+    [0, 1, 2].forEach((i) =>
+      svg.append(s("circle", { class: "coin", cx: 30 + i * 6, cy: 30, r: 6, fill: "#eda100", stroke: "#b77c00", "stroke-width": 1.5, style: `animation-delay: ${i * 180}ms` })),
+    );
+  }
+  if (from !== to) afterPaint(() => (level.style.transform = `scaleY(${to})`));
+  return svg;
+}
+
+// This month's challenge: one category to keep under its target, with a marker for where it should be today.
+function challengeCard(d) {
+  const month = d.today.slice(0, 7);
+  const c = d.challenges[0];
+  if (!c || c.month !== month) return null;
+  const past = d.challenges.filter((x) => x.month < month);
+  const won = (x) => x.spent <= x.target;
+  const [y, m] = month.split("-").map(Number);
+  const dayShare = Number(d.today.slice(8)) / new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const over = c.spent > c.target;
+  const ahead = c.spent > c.target * dayShare;
+  const color = over ? "var(--critical)" : ahead ? "var(--series-2)" : "var(--series-3)";
+  const fill = h("div", { class: "fill collapsed", style: { background: color } });
+  afterPaint(() => {
+    fill.style.transform = `scaleX(${c.target > 0 ? Math.min(1, c.spent / c.target) : 1})`;
+    fill.classList.remove("collapsed");
+  });
+  // A won challenge from last month is celebrated once.
+  const last = past[0];
+  if (last && won(last) && remembered(`challenge:${last.month}`) === 0) {
+    remembered(`challenge:${last.month}`, 1);
+    setTimeout(() => {
+      confetti(innerWidth / 2, innerHeight / 3);
+      toast(`✓ ${monthLong(last.month)}n haaste onnistui`);
+    }, 2000);
+  }
+  return h(
+    "section",
+    { class: "card press", style: { cursor: "pointer" }, onclick: () => go("transactions", { category: c.category, month, q: "" }) },
+    h("div", { class: "eyebrow" }, "Kuukauden haaste"),
+    h("div", { class: "challenge-title" }, dot(c.category), `${catName(c.category)} alle ${eur0(c.target)}`),
+    h("div", { class: "small muted" }, `Yleensä noin ${eur0(c.usual)} kuussa: 15 % vähemmän kuin tavallisesti.`),
+    h("div", { class: "goal-track", role: "img", "aria-label": `Käytetty ${eur0(c.spent)} / ${eur0(c.target)}` }, fill, h("span", { class: "now", style: { left: `${dayShare * 100}%` } })),
+    h(
+      "div",
+      { class: "goal-ends" },
+      h("span", { class: "num" }, `${eur0(c.spent)} / ${eur0(c.target)}`),
+      h("b", { style: { color } }, over ? `${eur0(c.spent - c.target)} yli` : ahead ? "Tahti liian kova" : `${eur0(c.target - c.spent)} jäljellä`),
+    ),
+    past.length
+      ? h("div", { class: "medals" }, past.slice(0, 5).map((x) => h("span", { class: `medal${won(x) ? " won" : ""}` }, `${won(x) ? "✓" : "✗"} ${monthShort(x.month)}`)))
+      : null,
+  );
+}
+
+// This week's day-to-day spending (recurring payments, housing, loans and bills left out) against the daily budget.
+function weekCard(d) {
+  const groupOf = new Map(d.categories.map((c) => [c.name, c.group]));
+  const recurring = new Set(d.recurring.map((r) => r.merchant));
+  const daily = d.transactions.filter(
+    (t) => !t.x && (!t.c || ["needs", "wants"].includes(groupOf.get(t.c))) && !["Housing", "Loans", "Bills"].includes(t.c) && !recurring.has(t.m),
+  );
+  const byDay = new Map();
+  for (const t of daily) byDay.set(t.d, (byDay.get(t.d) || 0) - t.a);
+  const monday = addDays(d.today, -((dt(d.today).getDay() + 6) % 7));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const sumOf = (dates) => dates.reduce((a, date) => a + (byDay.get(date) || 0), 0);
+  const past = days.filter((date) => date <= d.today);
+  const thisWeek = sumOf(past);
+  const diff = thisWeek - sumOf(past.map((date) => addDays(date, -7)));
+  const budget = d.safeToSpendPerDay;
+  const oldest = d.transactions.length ? d.transactions[d.transactions.length - 1].d : d.today;
+  let streak = 0;
+  for (let date = d.today; budget > 0 && date >= oldest && (byDay.get(date) || 0) <= budget && streak < 365; date = addDays(date, -1)) streak++;
+  const biggest = daily.filter((t) => t.d >= monday && t.a < 0).sort((a, b) => a.a - b.a)[0];
+  const chart = h("div", { class: "chart", style: { marginTop: "6px" } });
+  afterPaint(() => drawWeek(chart, days, byDay, budget, d.today));
+  const over = past.some((date) => (byDay.get(date) || 0) > budget);
+  return h(
+    "section",
+    { class: "card" },
+    h("div", { class: "eyebrow" }, "Päivittäiset menot · ilman laskuja"),
+    h("div", { class: "figure num" }, ticker(thisWeek, eur, "week")),
+    h(
+      "span",
+      { class: `pill ${diff <= 0 ? "good" : "bad"}` },
+      diff <= 0 ? `▼ ${eur0(-diff)} vähemmän` : `▲ ${eur0(diff)} enemmän`,
+      h("span", { class: "rest" }, " kuin viime viikolla"),
+    ),
+    h(
+      "div",
+      { class: "legend", style: { flexWrap: "wrap" } },
+      h("span", {}, h("span", { class: "key", style: { background: "var(--series-1)" } }), "Päivän menot"),
+      over ? h("span", {}, h("span", { class: "key", style: { background: "var(--series-2)" } }), "Yli budjetin") : null,
+      budget > 0 ? h("span", {}, h("span", { class: "key dash" }), `Päiväbudjetti ${eur0(budget)}`) : null,
+    ),
+    chart,
+    h(
+      "div",
+      { class: "week-tiles" },
+      h("div", { class: "tile" }, h("div", { class: "eyebrow" }, "Putki"), h("div", { class: "v" }, streak ? `${streak} pv budjetissa` : "Aloita tänään")),
+      h("div", { class: "tile" }, h("div", { class: "eyebrow" }, "Suurin ostos"), h("div", { class: "v" }, biggest ? `${biggest.m} ${eur0(-biggest.a)}` : "Ei vielä ostoksia")),
+    ),
+  );
+}
+
+// Seven columns, Monday to Sunday; the part above the daily budget is orange.
+function drawWeek(container, days, byDay, budget, today) {
+  const W = container.clientWidth || 320;
+  const H = 130;
+  const pad = { t: 20, b: 22 };
+  const base = H - pad.b;
+  const values = days.map((date) => byDay.get(date) || 0);
+  const max = Math.max(1, budget * 1.3, ...values);
+  const y = (v) => base - (v / max) * (base - pad.t);
+  const slot = W / 7;
+  const barW = Math.min(26, slot * 0.5);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": `Päivän menot tällä viikolla: ${days.map((date, i) => `${weekday.format(dt(date))} ${eur0(values[i])}`).join(", ")}` });
+  svg.append(s("line", { x1: 0, x2: W, y1: base, y2: base, stroke: "var(--line)", "stroke-width": 1 }));
+  const bars = [];
+  days.forEach((date, i) => {
+    const cx = slot * i + slot / 2;
+    const v = values[i];
+    const isToday = date === today;
+    if (date > today) {
+      svg.append(s("circle", { cx, cy: base - 3, r: 2.5, fill: "var(--series-muted)" }));
+    } else if (v > 0) {
+      const under = budget > 0 ? Math.min(v, budget) : v;
+      const overTop = v > under ? y(v) : null;
+      // The part within budget, squared off when the orange part sits on top (2px gap between them).
+      const underTop = Math.min(base - 2, y(under));
+      const lower = overTop == null
+        ? s("path", { d: columnPath(cx, barW, underTop, base), fill: "var(--series-1)" })
+        : s("rect", { x: cx - barW / 2, y: underTop + 1, width: barW, height: base - underTop - 1, fill: "var(--series-1)" });
+      const group = s("g", { class: `grow-y${REDUCED_MOTION ? "" : " collapsed-y"}` }, lower);
+      if (overTop != null) group.append(s("path", { d: columnPath(cx, barW, Math.min(overTop, underTop - 3), underTop - 1), fill: "var(--series-2)" }));
+      bars.push(group);
+      svg.append(group);
+      if (isToday) svg.append(s("text", { x: cx, y: Math.min(y(v), underTop) - 6, "text-anchor": "middle", class: "value" }, compact(v)));
+    }
+    svg.append(s("text", { x: cx, y: H - 6, "text-anchor": "middle", class: isToday ? "value" : "" }, weekday.format(dt(date)).replace(".", "")));
+    const hit = s("rect", { x: slot * i, y: 0, width: slot, height: H, fill: "transparent" });
+    hit.append(s("title", {}, `${capital(shortDate(date))}: ${eur(v)}`));
+    svg.append(hit);
+  });
+  if (budget > 0) svg.append(s("line", { x1: 0, x2: W, y1: y(budget), y2: y(budget), stroke: "var(--text)", "stroke-width": 1, "stroke-dasharray": "3 3", "pointer-events": "none" }));
+  container.replaceChildren(svg);
+  afterPaint(() => bars.forEach((b, i) => setTimeout(() => b.classList.remove("collapsed-y"), i * 50)));
+}
+
+function mini(label, value) {
+  return h("div", { class: "mini" }, h("div", { class: "k" }, label), h("div", { class: "v num" }, value));
+}
+
+// Cumulative spending this month vs last month, by day of the month.
+function paceCard(d) {
+  const diff = d.spentThisMonth - d.spentLastMonthToDate;
+  const thisMonth = d.today.slice(0, 7);
+  const lastMonth = shiftMonth(thisMonth, -1);
+  const chart = h("div", { class: "chart" });
+  afterPaint(() => drawPace(chart, d.pace, monthLong(thisMonth), monthLong(lastMonth)));
+  return h(
+    "section",
+    { class: "card" },
+    h("div", { class: "eyebrow" }, "Kulutettu"),
+    h("div", { class: "figure num" }, ticker(d.spentThisMonth, eur, "spent")),
+    h(
+      "span",
+      { class: `pill ${diff <= 0 ? "good" : "bad"}` },
+      diff <= 0 ? `▼ ${eur0(-diff)} vähemmän` : `▲ ${eur0(diff)} enemmän`,
+      h("span", { class: "rest" }, ` kuin ${monthIn(lastMonth)} samaan aikaan`),
+    ),
+    h(
+      "div",
+      { class: "legend" },
+      h("span", {}, h("span", { class: "key line", style: { background: "var(--series-1)" } }), monthLong(thisMonth)),
+      h("span", {}, h("span", { class: "key line", style: { background: "var(--series-muted)" } }), monthLong(lastMonth)),
+    ),
+    chart,
+  );
+}
+
+function drawPace(container, pace, thisLabel, lastLabel) {
+  const W = container.clientWidth || 320;
+  const H = 180;
+  const pad = { l: 34, r: 40, t: 12, b: 22 };
+  const days = Math.max(pace.lastMonth.length, 31);
+  const { step, max } = niceScale(Math.max(...pace.thisMonth, ...pace.lastMonth));
+  const x = (i) => pad.l + (i / (days - 1)) * (W - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
+  const pathOf = (values) => values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": `Kertynyt kulutus: ${thisLabel} ja ${lastLabel}` });
+  for (let v = 0; v <= max; v += step) {
+    svg.append(s("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v), stroke: v ? "var(--line-strong)" : "var(--text-3)", "stroke-width": 1, "stroke-dasharray": v ? "2 3" : "" }));
+    svg.append(s("text", { x: pad.l - 6, y: y(v) + 4, "text-anchor": "end" }, compact(v)));
+  }
+  for (const dayNo of [1, 10, 20, 30]) svg.append(s("text", { x: x(dayNo - 1), y: H - 4, "text-anchor": "middle" }, String(dayNo)));
+  const last = pace.lastMonth;
+  const cur = pace.thisMonth;
+  const area = s("path", { d: `${pathOf(cur)}L${x(cur.length - 1)},${y(0)}L${x(0)},${y(0)}Z`, fill: "url(#fade-pace)" });
+  svg.append(fade("fade-pace"), area);
+  svg.append(s("path", { d: pathOf(last), fill: "none", stroke: "var(--series-muted)", "stroke-width": 1.5, "stroke-dasharray": "3 3", "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  const line = s("path", { d: pathOf(cur), fill: "none", stroke: "var(--series-1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round", class: "draw" });
+  svg.append(line);
+  const ci = cur.length - 1;
+  svg.append(s("circle", { cx: x(ci), cy: y(cur[ci]), r: 4.5, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2 }));
+  svg.append(s("text", { x: x(ci) + 9, y: y(cur[ci]) + 4, class: "value" }, compact(cur[ci])));
+  if (last.length) svg.append(s("text", { x: x(last.length - 1) + 6, y: y(last[last.length - 1]) + 4 }, compact(last[last.length - 1])));
+
+  // Crosshair, a dot on each line and a tooltip while a finger or the mouse is on the chart.
+  const cross = s("line", { y1: pad.t, y2: H - pad.b, stroke: "var(--text-3)", "stroke-width": 1, visibility: "hidden" });
+  const dotLast = s("circle", { r: 4, fill: "var(--series-muted)", stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" });
+  const dotCur = s("circle", { r: 4, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" });
+  svg.append(cross, dotLast, dotCur);
+  const tip = h("div", { class: "tip", hidden: true });
+  const hit = s("rect", { x: pad.l - 10, y: 0, width: W - pad.l - pad.r + 20, height: H, fill: "transparent" });
+  const move = (evt) => {
+    const rect = svg.getBoundingClientRect();
+    const px = ((evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left) * (W / rect.width);
+    const i = Math.max(0, Math.min(days - 1, Math.round(((px - pad.l) / (W - pad.l - pad.r)) * (days - 1))));
+    cross.setAttribute("visibility", "visible");
+    cross.setAttribute("x1", x(i));
+    cross.setAttribute("x2", x(i));
+    for (const [dot, values] of [[dotLast, last], [dotCur, cur]]) {
+      dot.setAttribute("visibility", i < values.length ? "visible" : "hidden");
+      if (i < values.length) {
+        dot.setAttribute("cx", x(i));
+        dot.setAttribute("cy", y(values[i]));
+      }
+    }
+    tip.replaceChildren(
+      h("b", {}, `${i + 1}. päivä`),
+      h("br"),
+      `${thisLabel} ${i < cur.length ? eur0(cur[i]) : "–"}`,
+      h("br"),
+      `${lastLabel} ${i < last.length ? eur0(last[i]) : "–"}`,
+    );
+    tip.style.left = `${Math.min(rect.width - 60, Math.max(60, (x(i) / W) * rect.width))}px`;
+    tip.style.top = `${(pad.t / H) * rect.height}px`;
+    tip.hidden = false;
+  };
+  const hide = () => {
+    for (const el of [cross, dotLast, dotCur]) el.setAttribute("visibility", "hidden");
+    tip.hidden = true;
+  };
+  hit.addEventListener("mousemove", move);
+  hit.addEventListener("touchstart", move, { passive: true });
+  hit.addEventListener("touchmove", move, { passive: true });
+  hit.addEventListener("mouseleave", hide);
+  hit.addEventListener("touchend", hide);
+  svg.append(hit);
+  container.replaceChildren(svg, tip);
+  if (!REDUCED_MOTION) {
+    const length = line.getTotalLength();
+    line.style.strokeDasharray = `${length}`;
+    line.style.strokeDashoffset = `${length}`;
+    area.style.opacity = "0";
+    area.style.transition = "opacity 600ms 400ms";
+    afterPaint(() => {
+      line.style.strokeDashoffset = "0";
+      area.style.opacity = "";
+    });
+  }
+}
+
+function recurringCard(d) {
+  if (!d.recurring.length) return null;
+  return [
+    h("h2", {}, "Säännölliset"),
+    h(
+      "section",
+      { class: "card" },
+      h(
+        "ul",
+        { class: "rows" },
+        d.recurring.map((r) =>
+          h(
+            "li",
+            {},
+            h("span", { class: "label" }, r.merchant, h("div", { class: "small faint" }, `${KIND_FI[r.kind] || r.kind} · seuraava ${shortDate(r.next)}`)),
+            h("span", { class: `num${r.amount > 0 ? " pos" : ""}` }, signed(r.amount)),
+          ),
+        ),
+      ),
+    ),
+  ];
+}
+
+function footer(d) {
+  return h(
+    "footer",
+    {},
+    d.lastSync ? `Päivitetty ${d.lastSync.time}` : "Ei vielä päivitetty",
+    d.consentDaysLeft != null ? ` · pankkiyhteys ${d.consentDaysLeft} pv` : "",
+    h("br"),
+    h("button", { class: "press", onclick: refresh }, "Päivitä tiedot"),
+  );
+}
+
+// Own transfers aren't spending whatever their category, so only other rows open the category picker.
+function txRow(t) {
+  return h(
+    t.x ? "div" : "button",
+    { class: `tx${t.x ? " transfer" : ""}`, onclick: t.x ? null : () => categorySheet(t) },
+    h("span", { class: "icon", style: { "--hue": catHue(t.c) }, "aria-hidden": "true" }, monogram(t.m)),
+    h("div", { class: "body" }, h("div", { class: "name" }, t.m), h("div", { class: "cat" }, dot(t.x ? "Transfers" : t.c), t.x ? "Oma siirto" : catName(t.c))),
+    h("span", { class: `num${t.a > 0 ? " pos" : ""}` }, signed(t.a)),
+  );
+}
+
+// Bottom sheet for picking a category. Saves to the sheet (Override, or My category for the whole merchant),
+// which recomputes everything and sends fresh data back.
+function categorySheet(t) {
+  const run = window.google && google.script && google.script.run;
+  let saving = false;
+  const close = () => {
+    document.removeEventListener("keydown", onKey);
+    // Removed after the closing animation; the timer also covers reduced motion, where no animation runs.
+    for (const el of [scrim, sheet]) el.classList.add("closing");
+    setTimeout(() => {
+      scrim.remove();
+      sheet.remove();
+    }, REDUCED_MOTION ? 0 : 220);
+  };
+  const onKey = (e) => e.key === "Escape" && !saving && close();
+  // A choice made for this one transaction stays on it; otherwise the merchant is the natural default.
+  const merchantBox = t.b ? h("input", { type: "checkbox" }) : null;
+  if (merchantBox) merchantBox.checked = t.s !== "override";
+  const save = (category, forMerchant) => {
+    if (saving) return;
+    if (!run) return toast("Tallennus toimii vain sovelluksessa");
+    saving = true;
+    sheet.classList.add("busy");
+    const count = forMerchant ? DATA.transactions.filter((o) => o.b && o.m === t.m && !o.x).length : 1;
+    run
+      .withSuccessHandler((json) => {
+        DATA = JSON.parse(json);
+        views = {};
+        const y = window.scrollY;
+        render("still");
+        window.scrollTo(0, y);
+        close();
+        const what = category ? catName(category) : "automaattinen";
+        toast(forMerchant && count > 1 ? `${what} · ${count} tapahtumaa` : what);
+      })
+      .withFailureHandler(() => {
+        saving = false;
+        sheet.classList.remove("busy");
+        toast("Tallennus epäonnistui");
+      })
+      .setCategory(t.k, category, forMerchant);
+  };
+  const forMerchant = () => Boolean(merchantBox && merchantBox.checked);
+  const scrim = h("div", { class: "scrim", onclick: () => !saving && close() });
+  const sheet = h(
+    "div",
+    { class: "sheet", role: "dialog", "aria-modal": "true", "aria-label": `Kategoria: ${t.m}` },
+    h("div", { class: "grab", "aria-hidden": "true" }),
+    h(
+      "div",
+      { class: "who" },
+      h("span", { class: "icon", style: { "--hue": catHue(t.c) }, "aria-hidden": "true" }, monogram(t.m)),
+      h("div", {}, h("div", { class: "name" }, t.m), h("div", { class: "meta" }, `${capital(shortDate(t.d))} · ${signed(t.a)}`)),
+    ),
+    merchantBox && h("label", { class: "switch" }, h("span", {}, "Kaikki kaupan tapahtumat"), merchantBox),
+    h(
+      "div",
+      { class: "picks" },
+      DATA.categories.map((c) =>
+        h("button", { class: "pick press", "aria-pressed": String(c.name === t.c), onclick: () => save(c.name, forMerchant()) }, dot(c.name), catName(c.name)),
+      ),
+    ),
+    // Only my own choices can be removed; the automatic category is what's left after that.
+    ["override", "merchant"].includes(t.s) &&
+      h("button", { class: "reset press", onclick: () => save("", t.s === "merchant") }, t.s === "merchant" ? "Poista kaupan oma kategoria" : "Palauta automaattinen"),
+  );
+  document.addEventListener("keydown", onKey);
+  document.body.append(scrim, sheet);
+}
+
+// --- Tapahtumat ---
+
+const PAGE = 60;
+
+function transactionsView() {
+  const list = h("div", {});
+  const resultLine = h("div", { class: "result-line" });
+  const sentinel = h("div", { style: { height: "1px" } });
+  let matches = [];
+  let dayTotals = new Map();
+  let shown = 0;
+  let lastDay = "";
+  let group = null;
+
+  const filter = () => {
+    const q = state.q.trim().toLowerCase();
+    matches = DATA.transactions.filter(
+      (t) =>
+        (!q || t.m.toLowerCase().includes(q) || catName(t.c).toLowerCase().includes(q)) &&
+        (!state.category || (state.category === "Uncategorized" ? !t.c : t.c === state.category)) &&
+        (!state.month || t.d.startsWith(state.month)),
+    );
+    dayTotals = new Map();
+    for (const t of matches) if (!t.x) dayTotals.set(t.d, (dayTotals.get(t.d) || 0) + t.a);
+    const total = [...dayTotals.values()].reduce((a, v) => a + v, 0);
+    resultLine.replaceChildren(h("span", {}, `${matches.length} tapahtumaa`), h("span", { class: "num" }, `yhteensä ${signed(total)}`));
+    list.replaceChildren();
+    shown = 0;
+    lastDay = "";
+    if (!matches.length) list.append(h("div", { class: "empty" }, "Ei tapahtumia."));
+    more();
+  };
+  // Renders the next page of rows, grouped by day under sticky headers.
+  const more = () => {
+    const page = matches.slice(shown, shown + PAGE);
+    for (const t of page) {
+      if (t.d !== lastDay) {
+        lastDay = t.d;
+        group = h("div", { class: "group" });
+        list.append(h("div", { class: "day-head" }, h("span", {}, capital(shortDate(t.d))), h("span", { class: "num" }, signed(dayTotals.get(t.d) || 0))), group);
+      }
+      group.append(txRow(t));
+    }
+    shown += page.length;
+  };
+  new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && shown < matches.length) more();
+  }, { rootMargin: "600px" }).observe(sentinel);
+
+  let timer;
+  const search = h("input", {
+    type: "search",
+    placeholder: "Hae kaupan tai kategorian nimellä",
+    value: state.q,
+    "aria-label": "Haku",
+    oninput: (e) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        state.q = e.target.value;
+        filter();
+      }, 150);
+    },
+  });
+  const chipGroup = (label, options, key) => {
+    const el = h(
+      "div",
+      { class: "chips", role: "group", "aria-label": label },
+      options.map(([value, text]) =>
+        h(
+          "button",
+          {
+            class: "chip press",
+            "aria-pressed": String(state[key] === value),
+            onclick: (e) => {
+              state[key] = value;
+              for (const c of el.children) c.setAttribute("aria-pressed", "false");
+              e.currentTarget.setAttribute("aria-pressed", "true");
+              filter();
+            },
+          },
+          text,
+        ),
+      ),
+    );
+    afterPaint(() => {
+      const on = el.querySelector('[aria-pressed="true"]');
+      if (on) el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+    });
+    return el;
+  };
+  const present = new Set(DATA.transactions.map((t) => t.c || "Uncategorized"));
+  const categoryOptions = [["", "Kaikki"], ...DATA.categories.filter((c) => present.has(c.name)).map((c) => [c.name, [dot(c.name), catName(c.name)]])];
+  if (present.has("Uncategorized")) categoryOptions.push(["Uncategorized", "Luokittelematta"]);
+  const monthOptions = [["", "Kaikki kuukaudet"], ...[...new Set(DATA.transactions.map((t) => t.d.slice(0, 7)))].map((m) => [m, monthLong(m)])];
+  filter();
+  return h(
+    "div",
+    { class: "view" },
+    h("header", { class: "top" }, h("h1", {}, "Tapahtumat")),
+    h("label", { class: "search" }, icon("search", 18), search),
+    chipGroup("Kategoria", categoryOptions, "category"),
+    chipGroup("Kuukausi", monthOptions, "month"),
+    resultLine,
+    list,
+    sentinel,
+  );
+}
+
+// --- Kuukaudet ---
+
+function monthsView() {
+  const d = DATA;
+  const header = h("header", { class: "top" }, h("h1", {}, "Kuukaudet"));
+  if (!d.months.length) return h("div", { class: "view" }, header, h("div", { class: "empty" }, "Ei vielä tietoja."));
+  const chart = h("div", { class: "chart" });
+  const net = h("div", { class: "small muted", style: { marginTop: "10px" } });
+  const body = h("div", {});
+  const select = (i) => {
+    if (i < 0 || i >= d.months.length || i === state.monthIndex) return;
+    const dir = i < state.monthIndex ? "next" : "prev"; // a smaller index is a newer month
+    state.monthIndex = i;
+    drawMonths(chart, d.months, i, select);
+    net.replaceChildren(...netLine(d.months[i], d.today));
+    const details = monthDetails(d.months, i);
+    details.dataset.dir = dir;
+    body.replaceChildren(details);
+  };
+  // Swipe left for the next (newer) month, right for the previous one.
+  let touch = null;
+  const swipeStart = (e) => (touch = e.target.closest(".no-swipe") ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY });
+  const swipeEnd = (e) => {
+    if (!touch) return;
+    const dx = e.changedTouches[0].clientX - touch.x;
+    const dy = e.changedTouches[0].clientY - touch.y;
+    touch = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) select(state.monthIndex + (dx < 0 ? -1 : 1));
+  };
+  afterPaint(() => drawMonths(chart, d.months, state.monthIndex, select, true));
+  net.append(...netLine(d.months[state.monthIndex], d.today));
+  body.append(monthDetails(d.months, state.monthIndex));
+  return h(
+    "div",
+    { class: "view", ontouchstart: swipeStart, ontouchend: swipeEnd },
+    header,
+    balanceCard(d),
+    h(
+      "section",
+      { class: "card" },
+      h("div", { class: "eyebrow" }, "Tulot ja kulutus · napauta tai pyyhkäise"),
+      h(
+        "div",
+        { class: "legend" },
+        h("span", {}, h("span", { class: "key", style: { background: "var(--series-3)" } }), "Tulot"),
+        h("span", {}, h("span", { class: "key", style: { background: "var(--series-1)" } }), "Kulutus"),
+      ),
+      chart,
+      net,
+    ),
+    body,
+  );
+}
+
+// "Jäi yli 420 € · 18 % tuloista" for the selected month.
+function netLine(m, today) {
+  const left = m.income - m.spent;
+  return [
+    h("b", { class: "num", style: { color: left >= 0 ? "var(--positive)" : "var(--negative)" } }, left >= 0 ? `Jäi yli ${eur0(left)}` : `Meni yli ${eur0(-left)}`),
+    m.income > 0 ? ` · ${Math.round((left / m.income) * 100)} % tuloista` : "",
+    m.month === today.slice(0, 7) ? " · kuukausi kesken" : "",
+  ];
+}
+
+// Net balance of all accounts (card debt subtracted) per day over the last months.
+function balanceCard(d) {
+  const b = d.balance;
+  if (!b || b.values.length < 2) return null;
+  const last = b.values[b.values.length - 1];
+  const diff = last - b.values[0];
+  const chart = h("div", { class: "chart", style: { marginTop: "14px" } });
+  afterPaint(() => drawBalance(chart, b));
+  return h(
+    "section",
+    { class: "card no-swipe" },
+    h("div", { class: "eyebrow" }, "Nettosaldo · korttivelka vähennetty"),
+    h("div", { class: "figure num" }, ticker(last, eur, "balance")),
+    h(
+      "span",
+      { class: `pill ${diff >= 0 ? "good" : "bad"}` },
+      diff >= 0 ? `▲ ${eur0(diff)}` : `▼ ${eur0(-diff)}`,
+      h("span", { class: "rest" }, ` ${dayMonth(b.start)} lähtien`),
+    ),
+    chart,
+  );
+}
+
+function drawBalance(container, b) {
+  const values = b.values;
+  const n = values.length;
+  const W = container.clientWidth || 320;
+  const H = 160;
+  const pad = { l: 34, r: 40, t: 12, b: 22 };
+  const low = Math.min(0, ...values);
+  const high = Math.max(...values);
+  const { step } = niceScale(high - low || 1);
+  const lo = Math.floor(low / step) * step;
+  const hi = Math.max(lo + step, Math.ceil(high / step) * step);
+  const x = (i) => pad.l + (i / (n - 1)) * (W - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
+  const dateAt = (i) => new Date(Date.parse(`${b.start}T12:00:00Z`) + i * 86400000).toISOString().slice(0, 10);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": `Saldo ${dayMonth(b.start)} ${eur0(values[0])}, nyt ${eur0(values[n - 1])}` });
+  for (let v = lo; v <= hi; v += step) {
+    svg.append(s("line", { x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v), stroke: v === 0 && lo < 0 ? "var(--text-3)" : "var(--line-strong)", "stroke-width": 1, "stroke-dasharray": v === 0 && lo < 0 ? "" : "2 3" }));
+    svg.append(s("text", { x: pad.l - 6, y: y(v) + 4, "text-anchor": "end" }, compact(v)));
+  }
+  // A month label on the first day of each month, unless it would sit on the y-axis labels.
+  for (let i = 0; i < n; i++) {
+    const date = dateAt(i);
+    if (date.endsWith("-01") && x(i) > pad.l + 12) svg.append(s("text", { x: x(i), y: H - 4, "text-anchor": "middle" }, monthShort(date.slice(0, 7))));
+  }
+  const path = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const floor = y(Math.max(lo, 0));
+  svg.append(s("path", { d: `${path}L${x(n - 1)},${floor}L${x(0)},${floor}Z`, fill: "url(#fade-balance)" }));
+  svg.prepend(fade("fade-balance"));
+  const line = s("path", { d: path, fill: "none", stroke: "var(--series-1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round", class: "draw" });
+  svg.append(line);
+  svg.append(s("circle", { cx: x(n - 1), cy: y(values[n - 1]), r: 4.5, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2 }));
+  svg.append(s("text", { x: x(n - 1) + 9, y: y(values[n - 1]) + 4, class: "value" }, compact(values[n - 1])));
+
+  // Crosshair, dot and tooltip while a finger or the mouse is on the chart.
+  const cross = s("line", { y1: pad.t, y2: H - pad.b, stroke: "var(--text-3)", "stroke-width": 1, visibility: "hidden" });
+  const dot = s("circle", { r: 4, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" });
+  svg.append(cross, dot);
+  const tip = h("div", { class: "tip", hidden: true });
+  const hit = s("rect", { x: pad.l - 10, y: 0, width: W - pad.l - pad.r + 20, height: H, fill: "transparent" });
+  const move = (evt) => {
+    const rect = svg.getBoundingClientRect();
+    const px = ((evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left) * (W / rect.width);
+    const i = Math.max(0, Math.min(n - 1, Math.round(((px - pad.l) / (W - pad.l - pad.r)) * (n - 1))));
+    for (const [k, v] of [["x1", x(i)], ["x2", x(i)], ["visibility", "visible"]]) cross.setAttribute(k, v);
+    for (const [k, v] of [["cx", x(i)], ["cy", y(values[i])], ["visibility", "visible"]]) dot.setAttribute(k, v);
+    tip.replaceChildren(h("b", {}, capital(shortDate(dateAt(i)))), h("br"), eur0(values[i]));
+    tip.style.left = `${Math.min(rect.width - 50, Math.max(50, (x(i) / W) * rect.width))}px`;
+    tip.style.top = `${(pad.t / H) * rect.height}px`;
+    tip.hidden = false;
+  };
+  const hide = () => {
+    cross.setAttribute("visibility", "hidden");
+    dot.setAttribute("visibility", "hidden");
+    tip.hidden = true;
+  };
+  hit.addEventListener("mousemove", move);
+  hit.addEventListener("touchstart", move, { passive: true });
+  hit.addEventListener("touchmove", move, { passive: true });
+  hit.addEventListener("mouseleave", hide);
+  hit.addEventListener("touchend", hide);
+  svg.append(hit);
+  container.replaceChildren(svg, tip);
+  if (!REDUCED_MOTION) {
+    const length = line.getTotalLength();
+    line.style.strokeDasharray = `${length}`;
+    line.style.strokeDashoffset = `${length}`;
+    afterPaint(() => (line.style.strokeDashoffset = "0"));
+  }
+}
+
+// A vertical accent gradient for the area under a line.
+function fade(id) {
+  return s("defs", {}, s("linearGradient", { id, x1: 0, x2: 0, y1: 0, y2: 1 }, s("stop", { offset: "0", "stop-color": "var(--series-1)", "stop-opacity": 0.22 }), s("stop", { offset: "1", "stop-color": "var(--series-1)", "stop-opacity": 0 })));
+}
+
+// Rounded data end, square at the baseline.
+function columnPath(cx, w, top, base) {
+  const r = Math.min(4, (base - top) / 2, w / 2);
+  const l = cx - w / 2;
+  return `M${l},${base}V${top + r}Q${l},${top} ${l + r},${top}H${l + w - r}Q${l + w},${top} ${l + w},${top + r}V${base}Z`;
+}
+
+// Income and spending columns per month, oldest on the left; tap a month to show its details.
+function drawMonths(container, monthsNewestFirst, selected, onSelect, animate) {
+  const months = [...monthsNewestFirst].reverse();
+  const sel = months.length - 1 - selected;
+  const W = container.clientWidth || 320;
+  const H = 170;
+  const pad = { t: 22, b: 24 };
+  const base = H - pad.b;
+  const max = Math.max(1, ...months.flatMap((m) => [m.spent, m.income]));
+  const slot = W / months.length;
+  const barW = Math.min(20, slot * 0.3);
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Tulot ja kulutus kuukausittain" });
+  svg.append(s("line", { x1: 0, x2: W, y1: base, y2: base, stroke: "var(--line)", "stroke-width": 1 }));
+  const bars = [];
+  months.forEach((m, i) => {
+    const center = slot * i + slot / 2;
+    const on = i === sel;
+    // Income on the left, spending on the right, 2px apart; values only on the selected month.
+    for (const [value, fill, cx] of [[m.income, "var(--series-3)", center - barW / 2 - 1], [m.spent, "var(--series-1)", center + barW / 2 + 1]]) {
+      const top = base - Math.max(2, (value / max) * (base - pad.t));
+      const bar = s("path", { d: columnPath(cx, barW, top, base), fill, opacity: on ? 1 : 0.35, class: `grow-y${animate && !REDUCED_MOTION ? " collapsed-y" : ""}` });
+      bars.push(bar);
+      svg.append(bar);
+      if (on) svg.append(s("text", { x: cx, y: top - 7, "text-anchor": "middle", class: "value" }, compact(value)));
+    }
+    svg.append(s("text", { x: center, y: H - 6, "text-anchor": "middle", class: on ? "value" : "" }, monthShort(m.month)));
+    const hit = s("rect", { x: slot * i, y: 0, width: slot, height: H, fill: "transparent", style: "cursor:pointer" });
+    hit.append(s("title", {}, `${monthLong(m.month)}: tulot ${eur(m.income)}, kulutus ${eur(m.spent)}`));
+    hit.addEventListener("click", () => onSelect(months.length - 1 - i));
+    svg.append(hit);
+  });
+  container.replaceChildren(svg);
+  if (animate) afterPaint(() => bars.forEach((b, i) => setTimeout(() => b.classList.remove("collapsed-y"), Math.floor(i / 2) * 50)));
+}
+
+// Tiny columns of one category's spending per month, the shown month highlighted.
+function categoryTrend(months, index, name) {
+  if (months.length < 2) return null;
+  const series = [...months].reverse().map((m) => ({ month: m.month, total: (m.categories.find((c) => c.name === name) || {}).total || 0 }));
+  const sel = months.length - 1 - index;
+  const max = Math.max(1, ...series.map((p) => p.total));
+  const w = 5;
+  const gap = 2;
+  const H = 18;
+  const svg = s("svg", { width: series.length * (w + gap) - gap, height: H, role: "img", "aria-label": `${catName(name)} kuukausittain: ${series.map((p) => `${monthShort(p.month)} ${eur0(p.total)}`).join(", ")}` });
+  series.forEach((p, i) => {
+    const top = H - Math.max(1, (p.total / max) * H);
+    svg.append(s("path", { d: columnPath(i * (w + gap) + w / 2, w, top, H), fill: i === sel ? "var(--series-1)" : "var(--series-muted)" }, s("title", {}, `${monthLong(p.month)}: ${eur(p.total)}`)));
+  });
+  return svg;
+}
+
+function monthDetails(months, index) {
+  const m = months[index];
+  const maxCat = Math.max(1, ...m.categories.map((c) => c.total));
+  const total = Math.max(1, m.needs + m.wants);
+  const needs = h("div", { class: "collapsed", style: { flex: `${m.needs} 0 0`, background: "var(--series-1)" } });
+  const wants = h("div", { class: "collapsed", style: { flex: `${m.wants} 0 0`, background: "var(--series-2)" } });
+  const bars = m.categories.map((c) => h("div", { class: "bar collapsed", style: { width: `${(c.total / maxCat) * 100}%`, "--hue": catHue(c.name) } }));
+  afterPaint(() => [needs, wants, ...bars].forEach((el) => el.classList.remove("collapsed")));
+  return h(
+    "div",
+    { class: "view" },
+    h("h2", {}, monthLong(m.month)),
+    h("div", { class: "stats" }, stat("Kulutus", eur0(m.spent)), stat("Tulot", eur0(m.income)), stat("Säästöön", eur0(m.saved))),
+    m.spent > 0
+      ? h(
+          "section",
+          { class: "card", style: { marginTop: "12px" } },
+          h("div", { class: "eyebrow" }, "Välttämättömät ja muut menot"),
+          h("div", { class: "split", role: "img", "aria-label": `Välttämättömät ${eur0(m.needs)}, muut ${eur0(m.wants)}` }, needs, wants),
+          h(
+            "div",
+            { class: "legend", style: { margin: "6px 0 0", justifyContent: "space-between", flexWrap: "wrap" } },
+            h("span", {}, h("span", { class: "key", style: { background: "var(--series-1)" } }), `Välttämättömät ${eur0(m.needs)} · ${Math.round((m.needs / total) * 100)} %`),
+            h("span", {}, h("span", { class: "key", style: { background: "var(--series-2)" } }), `Muut ${eur0(m.wants)}`),
+          ),
+        )
+      : null,
+    h(
+      "section",
+      { class: "card" },
+      h("div", { class: "eyebrow", style: { marginBottom: "4px" } }, "Kategoriat · napauta nähdäksesi tapahtumat"),
+      m.categories.length
+        ? m.categories.map((c, i) =>
+            h(
+              "button",
+              { class: "bar-row press", onclick: () => go("transactions", { category: c.name, month: m.month, q: "" }) },
+              h("div", { class: "bar-head" }, h("span", {}, dot(c.name), catName(c.name), h("span", { class: "count" }, c.count)), h("span", { class: "trend" }, categoryTrend(months, index, c.name), h("span", { class: "num" }, eur(c.total)))),
+              bars[i],
+            ),
+          )
+        : h("div", { class: "empty" }, "Ei kulutusta."),
+    ),
+  );
+}
+
+function stat(label, value) {
+  return h("div", { class: "stat" }, h("div", { class: "eyebrow" }, label), h("div", { class: "v num" }, value));
+}
+
+render();
+let resizeTimer;
+let lastWidth = window.innerWidth;
+window.addEventListener("resize", () => {
+  if (window.innerWidth === lastWidth) return; // ignore iOS toolbar height changes
+  lastWidth = window.innerWidth;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    views = {};
+    render("still");
+  }, 200);
+});
+</script>
+</body>
+</html>
