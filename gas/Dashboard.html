@@ -827,7 +827,7 @@ function remembered(key, value) {
 function savingsCard(d) {
   const sv = d.savings;
   const saved = Math.max(0, sv.saved);
-  const goal = sv.goal || saved + sv.suggested;
+  const goal = sv.goal || Math.max(saved + sv.suggested, sv.reachable);
   const share = (c) => (goal > 0 ? Math.min(1, c / goal) : 0);
   // Coins and confetti once for each new transfer: the page remembers what it last showed for this period.
   const key = `saved:${d.periodStart}`;
@@ -835,7 +835,7 @@ function savingsCard(d) {
   const isNew = seen != null && saved > seen;
   if (seen != null && saved !== seen) remembered(key, saved);
 
-  const jar = savingsJar(share(isNew ? seen : saved), share(saved), isNew);
+  const jar = savingsJar(share(isNew ? seen : saved), share(saved), isNew, share(sv.reachable));
   let figure, text;
   if (sv.goal) {
     figure = [
@@ -896,17 +896,20 @@ function savingsCard(d) {
   return card;
 }
 
-// A jar filled to `to` (0–1), rising from `from`; three coins drop in when `coins` is set.
-function savingsJar(from, to, coins) {
+// A jar filled to `to` (0–1), rising from `from`; three coins drop in when `coins` is set. A lighter layer
+// above the fill reaches `potential`: what this period could realistically end at.
+function savingsJar(from, to, coins, potential = to) {
   const body = "M14,22 Q14,16 20,16 H52 Q58,16 58,22 V78 Q58,86 50,86 H22 Q14,86 14,78 Z";
-  const level = s("rect", { class: "level", x: 14, y: 16, width: 44, height: 70, fill: "var(--series-3)", style: `transform: scaleY(${REDUCED_MOTION ? to : from})` });
+  const layer = (fill, end) => s("rect", { class: "level", x: 14, y: 16, width: 44, height: 70, fill, style: `transform: scaleY(${REDUCED_MOTION ? end : from})` });
+  const level = layer("var(--series-3)", to);
+  const extra = layer("color-mix(in srgb, var(--series-3) 40%, #e8d44d)", potential);
   const svg = s(
     "svg",
-    { class: "jar", width: 72, height: 90, viewBox: "0 0 72 90", role: "img", "aria-label": `Säästöpurkki ${Math.round(to * 100)} % täynnä` },
+    { class: "jar", width: 72, height: 90, viewBox: "0 0 72 90", role: "img", "aria-label": `Säästöpurkki ${Math.round(to * 100)} % täynnä${potential > to ? `, mahdollista ${Math.round(potential * 100)} %` : ""}` },
     s("defs", {}, s("clipPath", { id: "jar-clip" }, s("path", { d: body }))),
     s("rect", { x: 22, y: 6, width: 28, height: 8, rx: 3, fill: "var(--series-muted)" }),
     s("path", { d: body, fill: "var(--surface-2)" }),
-    s("g", { "clip-path": "url(#jar-clip)" }, level),
+    s("g", { "clip-path": "url(#jar-clip)" }, extra, level),
     s("path", { d: body, fill: "none", stroke: "var(--series-muted)", "stroke-width": 2 }),
     s("path", { d: "M21,28 V60", stroke: "#fff", "stroke-width": 3, "stroke-linecap": "round", opacity: 0.6 }),
   );
@@ -915,7 +918,10 @@ function savingsJar(from, to, coins) {
       svg.append(s("circle", { class: "coin", cx: 30 + i * 6, cy: 30, r: 6, fill: "#eda100", stroke: "#b77c00", "stroke-width": 1.5, style: `animation-delay: ${i * 180}ms` })),
     );
   }
-  if (from !== to) afterPaint(() => (level.style.transform = `scaleY(${to})`));
+  afterPaint(() => {
+    level.style.transform = `scaleY(${to})`;
+    extra.style.transform = `scaleY(${potential})`;
+  });
   return svg;
 }
 
