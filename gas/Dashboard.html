@@ -161,7 +161,7 @@
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pos { color: var(--positive); }
   /* Amounts in lists and meta lines use the mono face so columns line up. */
-  :is(.tx, .rows, .bar-head, .day-head, .result-line, .goal-ends) .num { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: -0.01em; }
+  :is(.tx, .rows, .bar-head, .day-head, .result-line) .num { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: -0.01em; }
 
   /* Hero: an instrument panel on a faint grid, its accent following the month's pace. */
   .hero { --tone: var(--tone-cool); position: relative; isolation: isolate; overflow: hidden; color: var(--hero-text); border-radius: 14px; padding: 18px 18px 14px; border: 1px solid var(--hero-border);
@@ -270,15 +270,6 @@
   .jar .level { transform-box: fill-box; transform-origin: bottom; transition: transform 1200ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms; }
   .jar .coin { transform-box: fill-box; animation: coin 900ms cubic-bezier(0.5, 0, 0.8, 0.6) both; }
   @keyframes coin { from { transform: translateY(-46px); opacity: 0; } 25% { opacity: 1; } 85% { opacity: 1; } to { transform: translateY(34px); opacity: 0; } }
-  .goal-track { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); margin: 16px 0 8px; }
-  .goal-track .fill { height: 100%; border-radius: 3px; transform-origin: left; transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-  .goal-track .now { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); }
-  .goal-ends { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-3); }
-  .goal-ends b { font: 600 12px var(--mono); }
-  .challenge-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin-top: 8px; }
-  .medals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
-  .medal { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 8px; border-radius: 5px; border: 1px solid var(--line); color: var(--text-3); }
-  .medal.won { background: var(--positive-bg); border-color: color-mix(in srgb, var(--positive) 25%, transparent); color: var(--positive); }
   .collapsed { transform: scaleX(0); }
   .collapsed-y { transform: scaleY(0); }
 
@@ -675,7 +666,6 @@ function homeView() {
     h("h2", {}, "Tämä viikko"),
     weekCard(d),
     h("h2", {}, "Tämä kuukausi"),
-    challengeCard(d),
     paceCard(d),
     recurringCard(d),
     d.transactions.length
@@ -927,51 +917,6 @@ function savingsJar(from, to, coins) {
   }
   if (from !== to) afterPaint(() => (level.style.transform = `scaleY(${to})`));
   return svg;
-}
-
-// This month's challenge: one category to keep under its target, with a marker for where it should be today.
-function challengeCard(d) {
-  const month = d.today.slice(0, 7);
-  const c = d.challenges[0];
-  if (!c || c.month !== month) return null;
-  const past = d.challenges.filter((x) => x.month < month);
-  const won = (x) => x.spent <= x.target;
-  const [y, m] = month.split("-").map(Number);
-  const dayShare = Number(d.today.slice(8)) / new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const over = c.spent > c.target;
-  const ahead = c.spent > c.target * dayShare;
-  const color = over ? "var(--critical)" : ahead ? "var(--series-2)" : "var(--series-3)";
-  const fill = h("div", { class: "fill collapsed", style: { background: color } });
-  afterPaint(() => {
-    fill.style.transform = `scaleX(${c.target > 0 ? Math.min(1, c.spent / c.target) : 1})`;
-    fill.classList.remove("collapsed");
-  });
-  // A won challenge from last month is celebrated once.
-  const last = past[0];
-  if (last && won(last) && remembered(`challenge:${last.month}`) === 0) {
-    remembered(`challenge:${last.month}`, 1);
-    setTimeout(() => {
-      confetti(innerWidth / 2, innerHeight / 3);
-      toast(`✓ ${monthLong(last.month)}n haaste onnistui`);
-    }, 2000);
-  }
-  return h(
-    "section",
-    { class: "card press", style: { cursor: "pointer" }, onclick: () => go("transactions", { category: c.category, month, q: "" }) },
-    h("div", { class: "eyebrow" }, "Kuukauden haaste"),
-    h("div", { class: "challenge-title" }, dot(c.category), `${catName(c.category)} alle ${eur0(c.target)}`),
-    h("div", { class: "small muted" }, `Yleensä noin ${eur0(c.usual)} kuussa: 15 % vähemmän kuin tavallisesti.`),
-    h("div", { class: "goal-track", role: "img", "aria-label": `Käytetty ${eur0(c.spent)} / ${eur0(c.target)}` }, fill, h("span", { class: "now", style: { left: `${dayShare * 100}%` } })),
-    h(
-      "div",
-      { class: "goal-ends" },
-      h("span", { class: "num" }, `${eur0(c.spent)} / ${eur0(c.target)}`),
-      h("b", { style: { color } }, over ? `${eur0(c.spent - c.target)} yli` : ahead ? "Tahti liian kova" : `${eur0(c.target - c.spent)} jäljellä`),
-    ),
-    past.length
-      ? h("div", { class: "medals" }, past.slice(0, 5).map((x) => h("span", { class: `medal${won(x) ? " won" : ""}` }, `${won(x) ? "✓" : "✗"} ${monthShort(x.month)}`)))
-      : null,
-  );
 }
 
 // This week's day-to-day spending (recurring payments, housing, loans and bills left out) against the daily budget.

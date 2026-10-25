@@ -296,23 +296,6 @@ test("the Settings sheet starts with a 1000 € savings goal and can be changed"
   assert.ok(sheet("Settings").length >= 1);
 });
 
-test("the monthly challenge targets the biggest wants category, 15% under its usual amount", () => {
-  const { env } = setup({});
-  const month = (m: string, cats: [string, string, number][]) => ({ month: m, categories: cats.map(([name, group, total]) => ({ name, group, total })) });
-  env.context.months = [
-    month("2026-10", [["Bars & eating out", "wants", 15000], ["Groceries", "needs", 90000]]),
-    month("2026-09", [["Bars & eating out", "wants", 20000], ["Shopping", "wants", 30000], ["Subscriptions", "wants", 99999]]),
-    month("2026-08", [["Bars & eating out", "wants", 30000], ["Shopping", "wants", 5000]]),
-    month("2026-07", [["Shopping", "wants", 90000]]), // started before the first transaction: ignored
-  ];
-  const [october, september] = env.run("monthlyChallenges(months, '2026-07-27')");
-  // October: bars average (200 + 300) / 2 = 250 € beats shopping (175 €); 85 % = 212.50 → 210 €.
-  assert.deepEqual({ ...october }, { month: "2026-10", category: "Bars & eating out", usual: 25000, target: 21000, spent: 15000 });
-  // September only has August before it.
-  assert.deepEqual({ ...september }, { month: "2026-09", category: "Bars & eating out", usual: 30000, target: 25000, spent: 20000 });
-  assert.equal(env.run("monthlyChallenges(months, '2026-07-27')").length, 2);
-});
-
 test("payday follows the Settings sheet; 31 means the last weekday of the month", () => {
   const { env } = setup({});
   const payday = (today: string) => env.run(`applySettings_(); nextPayday("${today}")`);

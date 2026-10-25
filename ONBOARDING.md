@@ -143,7 +143,7 @@ Suggest **extra categories** only where there's real spending, at most 3–4. Gi
 ("Auto", "Lemmikit", "Lapset", "Harrastukset"). The dashboard translates the built-in categories to Finnish
 but shows added ones exactly as written. Groups:
 - `needs`: necessary costs
-- `wants`: optional spending (the monthly challenge picks from these)
+- `wants`: optional spending
 - `savings`: money put aside; it fills the savings goal
 - `income`
 - `transfer`: their own money moving between their own accounts, which isn't spending

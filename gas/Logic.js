@@ -478,7 +478,6 @@ function buildDashboard(txs, balances, recurring, groups, icons, consentValidUnt
 
   return Object.assign(s, {
     savings: savingsPlan(txs, s, recurring, groups, firstDate, savingsGoal),
-    challenges: monthlyChallenges(months, firstDate),
     balance: balanceHistory(txs, balances, today, historyStart > firstDate ? historyStart : firstDate),
     pace: { thisMonth: pace(monthStart, today), lastMonth: pace(lastMonthStart, addDays(monthStart, -1)) },
     months,
@@ -541,32 +540,6 @@ function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
     reachable: Math.max(saved, saved + Math.floor(Math.max(0, s.safeToSpend - typicalDaily * s.daysLeft) / 1000) * 1000),
     periodEnd: addDays(nextPayday(s.today), -1),
   };
-}
-
-// --- Monthly challenge ---
-// Each month the "wants" category with the highest average over up to 3 earlier complete months becomes a
-// challenge: spend 15% less than usual. Months that started before the first transaction don't count.
-const CHALLENGE_SHARE = 0.85;
-const CHALLENGE_MIN_USUAL = 3000; // below 30 €/month there's nothing worth cutting
-const CHALLENGE_SKIP = ["Subscriptions", "Uncategorized"]; // fixed prices, or not a real category
-
-// months: newest first, as in buildDashboard. Returns [{ month, category, usual, target, spent }], newest first.
-function monthlyChallenges(months, firstDate) {
-  const result = [];
-  months.forEach((m, i) => {
-    const before = months.slice(i + 1, i + 4).filter((p) => `${p.month}-01` >= firstDate);
-    if (!before.length) return;
-    const totals = new Map();
-    for (const p of before) {
-      for (const c of p.categories) if (c.group === "wants" && !CHALLENGE_SKIP.includes(c.name)) totals.set(c.name, (totals.get(c.name) || 0) + c.total);
-    }
-    const top = [...totals].sort((a, b) => b[1] - a[1])[0];
-    const usual = top ? Math.round(top[1] / before.length) : 0;
-    if (usual < CHALLENGE_MIN_USUAL) return;
-    const spent = (m.categories.find((c) => c.name === top[0]) || {}).total || 0;
-    result.push({ month: m.month, category: top[0], usual, target: Math.floor((usual * CHALLENGE_SHARE) / 1000) * 1000, spent });
-  });
-  return result;
 }
 
 // Net balance of all accounts (card debt negative) at the end of each day from `from` to today, rebuilt
