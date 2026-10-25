@@ -217,6 +217,7 @@ const GOAL_STATUS_TEXT = { done: "reached", ok: "in reach", tight: "tight", out:
 
 function writeSummary_(s, plan, sync) {
   const eur = (cents) => euros_(cents);
+  const p = plan.progress;
   const rows = [
     ["Safe to spend per day", eur(s.safeToSpendPerDay)],
     ["Safe to spend until payday", eur(s.safeToSpend)],
@@ -238,14 +239,20 @@ function writeSummary_(s, plan, sync) {
     // Read by the home screen widget (widget/): the only values it shows.
     ["Savings jar level", plan.jarLevel],
     ["Savings jar potential", plan.jarPotential],
+    ["Savings jar earned", plan.jarEarned],
+    // + under the usual day-to-day spending, - over it, oldest first; read by the widget too.
+    ["Last 7 settled days vs usual", p ? p.days.map((v) => (v == null ? "." : v >= 0 ? "+" : "-")).join("") : ""],
+    ["Usual day-to-day spending per day", p ? eur(p.baseline) : ""],
+    ["Under usual spending this pay period", p ? eur(p.earned) : ""],
     ["", ""],
     ["Bills before payday", ""],
     ...s.upcoming.map((u) => [`${u.merchant} (${u.date})`, eur(u.amount)]),
   ];
   writeRows_(SHEETS.summary, rows);
-  const money = new Set([0, 1, 4, 5, 6, 7, 8, 9, 14, 15]);
-  const formats = rows.map((r, i) => ["@", money.has(i) || (i >= 21 && r[1] !== "") ? EURO_FORMAT : "0"]);
-  for (const i of [2, 12, 13, 16]) formats[i][1] = "@";
-  for (const i of [17, 18]) formats[i][1] = "0%";
+  const money = new Set([0, 1, 4, 5, 6, 7, 8, 9, 14, 15, 21, 22]);
+  const billsFrom = rows.length - s.upcoming.length;
+  const formats = rows.map((r, i) => ["@", money.has(i) || (i >= billsFrom && r[1] !== "") ? EURO_FORMAT : "0"]);
+  for (const i of [2, 12, 13, 16, 20]) formats[i][1] = "@";
+  for (const i of [17, 18, 19]) formats[i][1] = "0%";
   sheet_(SHEETS.summary).getRange(2, 1, rows.length, 2).setNumberFormats(formats);
 }

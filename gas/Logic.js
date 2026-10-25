@@ -503,19 +503,12 @@ const GOAL_TIGHT = 0.8; // a goal is still in reach if it needs at most 20% less
 // "tight" (fits if spending stays under the usual + 20% but not more than 20% under it) or "out"; perDayIfGoal is
 // what's left per day once the rest of the goal is moved, and reachable what the period can realistically end at.
 // The savings jar is full at jarFull (the goal, or without one what could go to savings) and fills to jarLevel,
-// with a lighter layer up to jarPotential (both 0–1).
+// with a striped layer up to jarEarned (what underspending has earned and isn't moved yet, see underspending())
+// and a lighter layer up to jarPotential (all 0–1).
 function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
-  const recurringMerchants = new Set(recurring.map((r) => r.merchant));
+  const spent = dayToDaySpending(txs, recurring, groups);
   const from = addDays(s.today, -(TYPICAL_SPENDING_DAYS - 1));
-  const days = daysBetween(from > firstDate ? from : firstDate, s.today) + 1;
-  const dayToDay = -sum(
-    txs
-      .filter((t) => !t.transfer && t.date >= from && t.date <= s.today)
-      .filter((t) => (!t.category || ["needs", "wants"].includes(groups.get(t.category))) && !["Housing", "Loans", "Bills"].includes(t.category))
-      .filter((t) => !recurringMerchants.has(t.merchant))
-      .map((t) => t.amount),
-  );
-  const typicalDaily = Math.max(0, Math.round(dayToDay / days));
+  const typicalDaily = usualDaily(spent, from > firstDate ? from : firstDate, s.today);
   const spare = s.safeToSpend - Math.round(typicalDaily * s.daysLeft * SAVING_BUFFER);
   const suggested = Math.max(0, Math.floor(spare / 1000) * 1000);
   const periodStart = previousPayday(s.today);
@@ -533,6 +526,7 @@ function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
   const reachable = Math.max(saved, saved + Math.floor(Math.max(0, s.safeToSpend - typicalDaily * s.daysLeft) / 1000) * 1000);
   const jarFull = goal || Math.max(Math.max(0, saved) + suggested, reachable);
   const jarShare = (c) => (jarFull > 0 ? Math.min(1, Math.max(0, c) / jarFull) : 0);
+  const progress = underspending(txs, spent, groups, firstDate, s.today);
   return {
     suggested,
     saved,
@@ -546,8 +540,72 @@ function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
     jarFull,
     jarLevel: jarShare(saved),
     jarPotential: jarShare(reachable),
+    jarEarned: jarShare(Math.max(0, saved) + (progress ? progress.waiting : 0)),
+    progress,
     periodEnd: addDays(nextPayday(s.today), -1),
   };
+}
+
+// Day-to-day spending per day (Map date → cents): needs and wants without transfers, housing, loans, bills or
+// recurring payments, net of refunds. As in the dashboard's week card.
+function dayToDaySpending(txs, recurring, groups) {
+  const recurringMerchants = new Set(recurring.map((r) => r.merchant));
+  const byDay = new Map();
+  for (const t of txs) {
+    if (t.transfer || recurringMerchants.has(t.merchant) || ["Housing", "Loans", "Bills"].includes(t.category)) continue;
+    if (t.category && !["needs", "wants"].includes(groups.get(t.category))) continue;
+    byDay.set(t.date, (byDay.get(t.date) || 0) - t.amount);
+  }
+  return byDay;
+}
+
+// Average of a day-to-day spending map per day from `from` to `to` (inclusive), in cents, at least 0.
+function usualDaily(spent, from, to) {
+  let total = 0;
+  for (let date = from; date <= to; date = addDays(date, 1)) total += spent.get(date) || 0;
+  return Math.max(0, Math.round(total / (daysBetween(from, to) + 1)));
+}
+
+// --- Saving: day-to-day progress ---
+const SETTLE_DAYS = 2; // card purchases are booked a day or two late, so the last two days aren't final yet
+const PROGRESS_DAYS = 7;
+const MIN_BASELINE_DAYS = 7;
+
+// How much less than usual went on day-to-day spending this pay period, so a sensible day shows up before any
+// money is moved. The usual amount (baseline) is fixed for the period: the day-to-day spending per day of the 28
+// days before payday, so spending less doesn't raise the bar. Each settled day (settledTo or older) adds the
+// baseline minus what was booked that day; overspending subtracts. waiting is the part of it not moved to savings
+// yet: a transfer to savings takes from what had been earned by the day it was made. days: the results of the
+// last 7 settled days, oldest first. Null without a week of history before payday.
+function underspending(txs, spent, groups, firstDate, today) {
+  const periodStart = previousPayday(today);
+  const historyFrom = addDays(periodStart, -TYPICAL_SPENDING_DAYS);
+  const from = historyFrom > firstDate ? historyFrom : firstDate;
+  if (daysBetween(from, periodStart) < MIN_BASELINE_DAYS) return null;
+  const baseline = usualDaily(spent, from, addDays(periodStart, -1));
+  const result = (date) => baseline - (spent.get(date) || 0);
+  const moved = new Map();
+  for (const t of txs) {
+    if (!t.transfer && groups.get(t.category) === "savings" && t.amount < 0 && t.date >= periodStart) moved.set(t.date, (moved.get(t.date) || 0) - t.amount);
+  }
+  const settledTo = addDays(today, -SETTLE_DAYS);
+  let earned = 0;
+  let waiting = 0;
+  // On each day the page had shown the days settled by then; a transfer that day moves that much at most.
+  for (let date = periodStart; date <= today; date = addDays(date, 1)) {
+    const settled = addDays(date, -SETTLE_DAYS);
+    if (settled >= periodStart) {
+      earned += result(settled);
+      waiting += result(settled);
+    }
+    if (moved.has(date)) waiting -= Math.min(Math.max(0, waiting), moved.get(date));
+  }
+  const days = [];
+  for (let i = PROGRESS_DAYS - 1; i >= 0; i--) {
+    const date = addDays(settledTo, -i);
+    days.push(date >= firstDate ? result(date) : null);
+  }
+  return { baseline, periodStart, settledTo, earned, waiting: Math.max(0, waiting), days };
 }
 
 // Net balance of all accounts (card debt negative) at the end of each day from `from` to today, rebuilt

@@ -833,8 +833,15 @@ function savingsCard(d) {
   const seen = remembered(key);
   const isNew = seen != null && saved > seen;
   if (seen != null && saved !== seen) remembered(key, saved);
+  // A coin also drops in once for each newly settled day that stayed under the usual day-to-day spending.
+  const p = sv.progress;
+  const settled = p ? Number(p.settledTo.replace(/-/g, "")) : 0;
+  const seenDay = p ? remembered(`settled:${p.periodStart}`) : null;
+  const lastDay = p ? p.days[p.days.length - 1] : null;
+  const goodDay = seenDay != null && settled > seenDay && p.settledTo >= p.periodStart && lastDay > 0;
+  if (seenDay != null && settled !== seenDay) remembered(`settled:${p.periodStart}`, settled);
 
-  const jar = savingsJar(share(isNew ? seen : saved), sv.jarLevel, isNew, sv.jarPotential);
+  const jar = savingsJar(share(isNew ? seen : saved), sv.jarLevel, isNew || goodDay, sv.jarPotential, sv.jarEarned);
   let figure, text;
   if (sv.goal) {
     figure = [
@@ -877,6 +884,7 @@ function savingsCard(d) {
     "section",
     { class: "card" },
     h("div", { class: "saving" }, jar, h("div", { class: "text" }, figure, text)),
+    progressLine(p),
     h(
       "div",
       { class: "small faint", style: { marginTop: "12px" } },
@@ -891,24 +899,70 @@ function savingsCard(d) {
       if (r.width) confetti(r.left + r.width / 2, r.top + 10);
       toast(sv.goal && saved >= sv.goal && seen < sv.goal ? "✓ Säästötavoite saavutettu" : `+${eur0(saved - seen)} säästöön`);
     }, 1300);
+  } else if (goodDay) {
+    setTimeout(() => toast(`${capital(shortDate(p.settledTo))}: ${eur0(lastDay)} alle tavallisen`), 1300);
   }
   return card;
 }
 
-// A jar filled to `to` (0–1), rising from `from`; three coins drop in when `coins` is set. A lighter layer
-// above the fill reaches `potential`: what this period could realistically end at.
-function savingsJar(from, to, coins, potential = to) {
+// This pay period's day-to-day spending against the usual (fixed at payday), counted up to two days ago because
+// card purchases arrive late. What's under it shows striped in the jar until it's moved to savings.
+function progressLine(p) {
+  if (!p) return null;
+  const under = p.earned >= 0;
+  return h(
+    "div",
+    { style: { marginTop: "14px" } },
+    h(
+      "span",
+      { class: `pill ${under ? "good" : "bad"}` },
+      under ? `▼ ${eur0(p.earned)}` : `▲ ${eur0(-p.earned)}`,
+      h("span", { class: "rest" }, under ? " alle tavallisen tällä jaksolla" : " yli tavallisen tällä jaksolla"),
+    ),
+    h(
+      "div",
+      { class: "small muted", style: { marginTop: "6px" } },
+      p.waiting >= 100 ? `${eur0(p.waiting)} odottaa siirtoa (raidat purkissa). ` : "",
+      `Tavallinen päivä ${eur0(p.baseline)}. Laskettu ${shortDate(p.settledTo)} asti, koska korttiostot näkyvät päivän tai kaksi myöhässä.`,
+    ),
+  );
+}
+
+// A jar filled to `to` (0–1), rising from `from`; three coins drop in when `coins` is set. A striped layer above
+// the fill reaches `earned` (underspending not moved to savings yet), a lighter one `potential`: what this period
+// could realistically end at.
+function savingsJar(from, to, coins, potential = to, earned = to) {
   const body = "M14,22 Q14,16 20,16 H52 Q58,16 58,22 V78 Q58,86 50,86 H22 Q14,86 14,78 Z";
   const layer = (fill, end) => s("rect", { class: "level", x: 14, y: 16, width: 44, height: 70, fill, style: `transform: scaleY(${REDUCED_MOTION ? end : from})` });
   const level = layer("var(--series-3)", to);
   const extra = layer("color-mix(in srgb, var(--series-3) 40%, #e8d44d)", potential);
+  // Moved rather than scaled, so the stripes keep their shape.
+  const slide = (share) => `transform: translateY(${(1 - share) * 70}px)`;
+  const striped = s("rect", { class: "level", x: 14, y: 16, width: 44, height: 70, fill: "url(#jar-hatch)", style: slide(REDUCED_MOTION ? earned : from) });
   const svg = s(
     "svg",
-    { class: "jar", width: 72, height: 90, viewBox: "0 0 72 90", role: "img", "aria-label": `Säästöpurkki ${Math.round(to * 100)} % täynnä${potential > to ? `, mahdollista ${Math.round(potential * 100)} %` : ""}` },
-    s("defs", {}, s("clipPath", { id: "jar-clip" }, s("path", { d: body }))),
+    {
+      class: "jar",
+      width: 72,
+      height: 90,
+      viewBox: "0 0 72 90",
+      role: "img",
+      "aria-label": `Säästöpurkki ${Math.round(to * 100)} % täynnä${earned > to ? `, arjesta säästetty ${Math.round((earned - to) * 100)} % lisää` : ""}${potential > Math.max(to, earned) ? `, mahdollista ${Math.round(potential * 100)} %` : ""}`,
+    },
+    s(
+      "defs",
+      {},
+      s("clipPath", { id: "jar-clip" }, s("path", { d: body })),
+      s(
+        "pattern",
+        { id: "jar-hatch", width: 5, height: 5, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" },
+        s("rect", { width: 5, height: 5, fill: "color-mix(in srgb, var(--series-3) 30%, var(--surface-2))" }),
+        s("rect", { width: 2.5, height: 5, fill: "var(--series-3)" }),
+      ),
+    ),
     s("rect", { x: 22, y: 6, width: 28, height: 8, rx: 3, fill: "var(--series-muted)" }),
     s("path", { d: body, fill: "var(--surface-2)" }),
-    s("g", { "clip-path": "url(#jar-clip)" }, extra, level),
+    s("g", { "clip-path": "url(#jar-clip)" }, extra, striped, level),
     s("path", { d: body, fill: "none", stroke: "var(--series-muted)", "stroke-width": 2 }),
     s("path", { d: "M21,28 V60", stroke: "#fff", "stroke-width": 3, "stroke-linecap": "round", opacity: 0.6 }),
   );
@@ -920,11 +974,14 @@ function savingsJar(from, to, coins, potential = to) {
   afterPaint(() => {
     level.style.transform = `scaleY(${to})`;
     extra.style.transform = `scaleY(${potential})`;
+    striped.setAttribute("style", slide(earned));
   });
   return svg;
 }
 
-// This week's day-to-day spending (recurring payments, housing, loans and bills left out) against the daily budget.
+// This week's day-to-day spending (recurring payments, housing, loans and bills left out) against the usual day
+// (fixed for the pay period, so spending less doesn't raise the bar). The last two days are still filling up with
+// card purchases, so they're drawn faded and the streak counts settled days only.
 function weekCard(d) {
   const groupOf = new Map(d.categories.map((c) => [c.name, c.group]));
   const recurring = new Set(d.recurring.map((r) => r.merchant));
@@ -939,14 +996,17 @@ function weekCard(d) {
   const past = days.filter((date) => date <= d.today);
   const thisWeek = sumOf(past);
   const diff = thisWeek - sumOf(past.map((date) => addDays(date, -7)));
-  const budget = d.safeToSpendPerDay;
+  const p = d.savings.progress;
+  const budget = p ? p.baseline : d.safeToSpendPerDay;
+  const settledTo = p ? p.settledTo : d.today;
   const oldest = d.transactions.length ? d.transactions[d.transactions.length - 1].d : d.today;
   let streak = 0;
-  for (let date = d.today; budget > 0 && date >= oldest && (byDay.get(date) || 0) <= budget && streak < 365; date = addDays(date, -1)) streak++;
+  for (let date = settledTo; budget > 0 && date >= oldest && (byDay.get(date) || 0) <= budget && streak < 365; date = addDays(date, -1)) streak++;
   const biggest = daily.filter((t) => t.d >= monday && t.a < 0).sort((a, b) => a.a - b.a)[0];
   const chart = h("div", { class: "chart", style: { marginTop: "6px" } });
-  afterPaint(() => drawWeek(chart, days, byDay, budget, d.today));
+  afterPaint(() => drawWeek(chart, days, byDay, budget, d.today, settledTo));
   const over = past.some((date) => (byDay.get(date) || 0) > budget);
+  const pending = past.some((date) => date > settledTo);
   return h(
     "section",
     { class: "card" },
@@ -962,21 +1022,22 @@ function weekCard(d) {
       "div",
       { class: "legend", style: { flexWrap: "wrap" } },
       h("span", {}, h("span", { class: "key", style: { background: "var(--series-1)" } }), "Päivän menot"),
-      over ? h("span", {}, h("span", { class: "key", style: { background: "var(--series-2)" } }), "Yli budjetin") : null,
-      budget > 0 ? h("span", {}, h("span", { class: "key dash" }), `Päiväbudjetti ${eur0(budget)}`) : null,
+      over ? h("span", {}, h("span", { class: "key", style: { background: "var(--series-2)" } }), p ? "Yli tavallisen" : "Yli budjetin") : null,
+      pending ? h("span", {}, h("span", { class: "key", style: { background: "var(--series-1)", opacity: 0.4 } }), "Tarkentuu") : null,
+      budget > 0 ? h("span", {}, h("span", { class: "key dash" }), `${p ? "Tavallinen päivä" : "Päiväbudjetti"} ${eur0(budget)}`) : null,
     ),
     chart,
     h(
       "div",
       { class: "week-tiles" },
-      h("div", { class: "tile" }, h("div", { class: "eyebrow" }, "Putki"), h("div", { class: "v" }, streak ? `${streak} pv budjetissa` : "Aloita tänään")),
+      h("div", { class: "tile" }, h("div", { class: "eyebrow" }, "Putki"), h("div", { class: "v" }, streak ? `${streak} pv ${p ? "alle tavallisen" : "budjetissa"}` : "Aloita tänään")),
       h("div", { class: "tile" }, h("div", { class: "eyebrow" }, "Suurin ostos"), h("div", { class: "v" }, biggest ? `${biggest.m} ${eur0(-biggest.a)}` : "Ei vielä ostoksia")),
     ),
   );
 }
 
-// Seven columns, Monday to Sunday; the part above the daily budget is orange.
-function drawWeek(container, days, byDay, budget, today) {
+// Seven columns, Monday to Sunday; the part above the daily budget is orange, days after settledTo are faded.
+function drawWeek(container, days, byDay, budget, today, settledTo = today) {
   const W = container.clientWidth || 320;
   const H = 130;
   const pad = { t: 20, b: 22 };
@@ -1003,7 +1064,7 @@ function drawWeek(container, days, byDay, budget, today) {
       const lower = overTop == null
         ? s("path", { d: columnPath(cx, barW, underTop, base), fill: "var(--series-1)" })
         : s("rect", { x: cx - barW / 2, y: underTop + 1, width: barW, height: base - underTop - 1, fill: "var(--series-1)" });
-      const group = s("g", { class: `grow-y${REDUCED_MOTION ? "" : " collapsed-y"}` }, lower);
+      const group = s("g", { class: `grow-y${REDUCED_MOTION ? "" : " collapsed-y"}`, opacity: date > settledTo ? 0.4 : 1 }, lower);
       if (overTop != null) group.append(s("path", { d: columnPath(cx, barW, Math.min(overTop, underTop - 3), underTop - 1), fill: "var(--series-2)" }));
       bars.push(group);
       svg.append(group);
@@ -1011,7 +1072,7 @@ function drawWeek(container, days, byDay, budget, today) {
     }
     svg.append(s("text", { x: cx, y: H - 6, "text-anchor": "middle", class: isToday ? "value" : "" }, weekday.format(dt(date)).replace(".", "")));
     const hit = s("rect", { x: slot * i, y: 0, width: slot, height: H, fill: "transparent" });
-    hit.append(s("title", {}, `${capital(shortDate(date))}: ${eur(v)}`));
+    hit.append(s("title", {}, `${capital(shortDate(date))}: ${eur(v)}${date > settledTo && date <= today ? " (tarkentuu)" : ""}`));
     svg.append(hit);
   });
   if (budget > 0) svg.append(s("line", { x1: 0, x2: W, y1: y(budget), y2: y(budget), stroke: "var(--text)", "stroke-width": 1, "stroke-dasharray": "3 3", "pointer-events": "none" }));

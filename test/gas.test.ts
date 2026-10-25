@@ -88,7 +88,8 @@ test("sync fills transactions, categories, transfers, balances and the summary",
   assert.equal(summary.get("Credit card owed"), 150);
   assert.equal(summary.get("Spent this month"), 40 + 12 + 150);
   assert.equal(summary.get("Bank access days left"), 177);
-  for (const row of ["Savings jar level", "Savings jar potential"]) {
+  assert.match(summary.get("Last 7 settled days vs usual"), /^[+\-.]{7}$/);
+  for (const row of ["Savings jar level", "Savings jar potential", "Savings jar earned"]) {
     const v = summary.get(row);
     assert.ok(typeof v === "number" && v >= 0 && v <= 1, `${row}: ${v}`); // the widget's only data, a share
   }
@@ -288,6 +289,27 @@ test("the savings goal says whether the rest still fits before payday", () => {
   assert.equal(out.periodEnd, "2026-11-12"); // the 14th is a Saturday, so payday is Friday the 13th
   assert.equal(plan(0, 20000).goalStatus, "done");
   assert.equal(plan(130000, 0).goalStatus, null);
+});
+
+test("day-to-day underspending adds up over the pay period, two days behind", () => {
+  const { env } = setup({});
+  env.context.groups = new Map([["Groceries", "needs"], ["Savings", "savings"]]);
+  env.context.txs = [
+    { date: "2026-09-20", amount: -28000, merchant: "K-Market", category: "Groceries" }, // before payday: 10 €/day usual
+    { date: "2026-10-14", amount: -500, merchant: "K-Market", category: "Groceries" }, // payday: +5 €
+    { date: "2026-10-15", amount: -3000, merchant: "K-Market", category: "Groceries" }, // −20 €
+    { date: "2026-10-20", amount: -20000, merchant: "Nordnet", category: "Savings" }, // moves the 15 € earned by then
+    { date: "2026-10-23", amount: -9999, merchant: "K-Market", category: "Groceries" }, // not settled yet
+  ];
+  env.context.recurring = [];
+  env.context.s = { today: "2026-10-24", safeToSpend: 50000, daysLeft: 20 };
+  const p = env.run("savingsPlan(txs, s, recurring, groups, '2026-07-27')").progress;
+  assert.equal(p.baseline, 1000);
+  assert.equal(p.settledTo, "2026-10-22");
+  assert.equal(p.earned, 500 - 2000 + 7 * 1000); // 14th–22nd
+  assert.equal(p.waiting, 4000); // 19th–22nd, after the transfer took 15 €
+  assert.deepEqual([...p.days], [1000, 1000, 1000, 1000, 1000, 1000, 1000]); // 16th–22nd
+  assert.equal(env.run("savingsPlan(txs, s, recurring, groups, '2026-10-10')").progress, null); // no usual yet
 });
 
 test("the Settings sheet starts with a 1000 € savings goal and can be changed", () => {

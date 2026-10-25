@@ -1,5 +1,6 @@
 // Savings jar home screen widget for Scriptable (iOS). Shows how full this pay period's savings jar is, as on
-// the dashboard, without any euro amounts. Run it once in the Scriptable app to save the endpoint address
+// the dashboard, and a dot for each of the last 7 settled days (green: under the usual day-to-day spending,
+// amber: over), without any euro amounts. Run it once in the Scriptable app to save the endpoint address
 // (widget/README.md); it's kept in the iOS Keychain, never in this file.
 
 const KEY = "savings-jar-url";
@@ -11,6 +12,10 @@ const COLORS = {
   outline: new Color("#8a94a3"),
   level: new Color("#2cc28e"),
   potential: new Color("#9dcd67"),
+  earned: new Color("#2cc28e", 0.45),
+  under: new Color("#2cc28e"),
+  over: new Color("#eda100"),
+  empty: new Color("#ffffff", 0.18),
   text: Color.white(),
 };
 
@@ -70,10 +75,18 @@ function build(data) {
   w.setPadding(12, 12, 12, 12);
 
   w.addSpacer();
-  const img = w.addImage(drawJar(data ? data.level : 0, data ? data.potential ?? data.level : 0));
-  img.imageSize = new Size(72, 90);
+  const level = data ? data.level : 0;
+  const img = w.addImage(drawJar(level, data ? data.potential ?? level : 0, data ? data.earned ?? level : 0));
+  img.imageSize = new Size(62, 78);
   img.centerAlignImage();
-  w.addSpacer(8);
+  if (data && data.days) {
+    w.addSpacer(7);
+    const dots = w.addImage(drawDays(data.days));
+    dots.imageSize = new Size(76, 7);
+    dots.centerAlignImage();
+    if (data.stale) dots.imageOpacity = 0.6;
+  }
+  w.addSpacer(6);
 
   const row = w.addStack();
   row.addSpacer();
@@ -87,8 +100,23 @@ function build(data) {
   return w;
 }
 
-// The dashboard's jar (an SVG with a 72×90 viewBox), drawn at 3× for a sharp image.
-function drawJar(level, potential) {
+// The last 7 settled days, oldest first: "+" under the usual day-to-day spending, "-" over it, "." no data.
+function drawDays(days) {
+  const [k, size, gap] = [3, 7, 4.5];
+  const ctx = new DrawContext();
+  ctx.size = new Size((7 * size + 6 * gap) * k, size * k);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  [...days].forEach((d, i) => {
+    ctx.setFillColor(d === "+" ? COLORS.under : d === "-" ? COLORS.over : COLORS.empty);
+    ctx.fillEllipse(new Rect(i * (size + gap) * k, 0, size * k, size * k));
+  });
+  return ctx.getImage();
+}
+
+// The dashboard's jar (an SVG with a 72×90 viewBox), drawn at 3× for a sharp image. Between the level and the
+// potential, a striped layer up to `earned`: underspending that isn't moved to savings yet.
+function drawJar(level, potential, earned) {
   const k = 3;
   const ctx = new DrawContext();
   ctx.size = new Size(72 * k, 90 * k);
@@ -115,12 +143,32 @@ function drawJar(level, potential) {
     return path;
   };
   const levelAt = (share) => bottom - Math.min(1, Math.max(0, share)) * (bottom - top);
+  // Diagonal stripes from height y1 down to y2, each cut to the jar's sides (the body is convex, so one segment).
+  const stripes = (y1, y2) => {
+    const inside = (x, y) => x >= left + inset(y) && x <= right - inset(y);
+    for (let c = left; c < right + (y2 - y1) + 5; c += 5) {
+      const x = (y) => c - (y2 - y);
+      const points = [];
+      for (let y = y1; y <= y2; y += 0.25) if (inside(x(y), y)) points.push(new Point(x(y) * k, y * k));
+      if (points.length < 2) continue;
+      const line = new Path();
+      line.addLines([points[0], points[points.length - 1]]);
+      ctx.addPath(line);
+      ctx.setStrokeColor(COLORS.earned);
+      ctx.setLineWidth(2.2 * k);
+      ctx.strokePath();
+    }
+  };
 
   const lid = new Path();
   lid.addRoundedRect(new Rect(22 * k, 6 * k, 28 * k, 8 * k), 3 * k, 3 * k);
   fill(lid, COLORS.outline);
   fill(shape(top), COLORS.glass);
   if (potential > level) fill(shape(levelAt(potential)), COLORS.potential);
+  if (earned > level) {
+    fill(shape(levelAt(earned)), COLORS.glass);
+    stripes(levelAt(earned), levelAt(level));
+  }
   if (level > 0) fill(shape(levelAt(level)), COLORS.level);
 
   ctx.addPath(shape(top));
