@@ -235,13 +235,17 @@ function writeSummary_(s, plan, sync) {
     ["Savings goal per pay period", eur(plan.goal)],
     ["Saved this pay period", eur(plan.saved)],
     ["Savings goal status", GOAL_STATUS_TEXT[plan.goalStatus] || "no goal"],
+    // Read by the home screen widget (widget/): the only values it shows.
+    ["Savings jar level", plan.jarLevel],
+    ["Savings jar potential", plan.jarPotential],
     ["", ""],
     ["Bills before payday", ""],
     ...s.upcoming.map((u) => [`${u.merchant} (${u.date})`, eur(u.amount)]),
   ];
   writeRows_(SHEETS.summary, rows);
   const money = new Set([0, 1, 4, 5, 6, 7, 8, 9, 14, 15]);
-  const formats = rows.map((r, i) => ["@", money.has(i) || (i >= 19 && r[1] !== "") ? EURO_FORMAT : "0"]);
+  const formats = rows.map((r, i) => ["@", money.has(i) || (i >= 21 && r[1] !== "") ? EURO_FORMAT : "0"]);
   for (const i of [2, 12, 13, 16]) formats[i][1] = "@";
+  for (const i of [17, 18]) formats[i][1] = "0%";
   sheet_(SHEETS.summary).getRange(2, 1, rows.length, 2).setNumberFormats(formats);
 }

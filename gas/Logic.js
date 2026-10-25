@@ -502,6 +502,8 @@ const GOAL_TIGHT = 0.8; // a goal is still in reach if it needs at most 20% less
 // goal (cents per pay period, 0 = none): goalStatus is "done", "ok" (the rest fits with the usual spending + 20%),
 // "tight" (fits if spending stays under the usual + 20% but not more than 20% under it) or "out"; perDayIfGoal is
 // what's left per day once the rest of the goal is moved, and reachable what the period can realistically end at.
+// The savings jar is full at jarFull (the goal, or without one what could go to savings) and fills to jarLevel,
+// with a lighter layer up to jarPotential (both 0–1).
 function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
   const recurringMerchants = new Set(recurring.map((r) => r.merchant));
   const from = addDays(s.today, -(TYPICAL_SPENDING_DAYS - 1));
@@ -528,6 +530,9 @@ function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
     else if (perDayIfGoal >= 0 && perDayIfGoal >= typicalDaily * GOAL_TIGHT) goalStatus = "tight";
     else goalStatus = "out";
   }
+  const reachable = Math.max(saved, saved + Math.floor(Math.max(0, s.safeToSpend - typicalDaily * s.daysLeft) / 1000) * 1000);
+  const jarFull = goal || Math.max(Math.max(0, saved) + suggested, reachable);
+  const jarShare = (c) => (jarFull > 0 ? Math.min(1, Math.max(0, c) / jarFull) : 0);
   return {
     suggested,
     saved,
@@ -537,7 +542,10 @@ function savingsPlan(txs, s, recurring, groups, firstDate, goal) {
     remaining,
     goalStatus,
     perDayIfGoal,
-    reachable: Math.max(saved, saved + Math.floor(Math.max(0, s.safeToSpend - typicalDaily * s.daysLeft) / 1000) * 1000),
+    reachable,
+    jarFull,
+    jarLevel: jarShare(saved),
+    jarPotential: jarShare(reachable),
     periodEnd: addDays(nextPayday(s.today), -1),
   };
 }

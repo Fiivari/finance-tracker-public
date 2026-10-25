@@ -88,6 +88,10 @@ test("sync fills transactions, categories, transfers, balances and the summary",
   assert.equal(summary.get("Credit card owed"), 150);
   assert.equal(summary.get("Spent this month"), 40 + 12 + 150);
   assert.equal(summary.get("Bank access days left"), 177);
+  for (const row of ["Savings jar level", "Savings jar potential"]) {
+    const v = summary.get(row);
+    assert.ok(typeof v === "number" && v >= 0 && v <= 1, `${row}: ${v}`); // the widget's only data, a share
+  }
 
   assert.equal(sheet("Balances").length, 2);
   assert.equal(sheet("Sync log")[0][1], "ok");

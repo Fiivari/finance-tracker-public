@@ -827,15 +827,14 @@ function remembered(key, value) {
 function savingsCard(d) {
   const sv = d.savings;
   const saved = Math.max(0, sv.saved);
-  const goal = sv.goal || Math.max(saved + sv.suggested, sv.reachable);
-  const share = (c) => (goal > 0 ? Math.min(1, c / goal) : 0);
+  const share = (c) => (sv.jarFull > 0 ? Math.min(1, c / sv.jarFull) : 0);
   // Coins and confetti once for each new transfer: the page remembers what it last showed for this period.
   const key = `saved:${d.periodStart}`;
   const seen = remembered(key);
   const isNew = seen != null && saved > seen;
   if (seen != null && saved !== seen) remembered(key, saved);
 
-  const jar = savingsJar(share(isNew ? seen : saved), share(saved), isNew, share(sv.reachable));
+  const jar = savingsJar(share(isNew ? seen : saved), sv.jarLevel, isNew, sv.jarPotential);
   let figure, text;
   if (sv.goal) {
     figure = [
